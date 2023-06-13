@@ -130,6 +130,7 @@ func (q grpcQuerier) AllContractState(c context.Context, req *types.QueryAllCont
 	r := make([]types.Model, 0)
 	prefixStore := prefix.NewStore(ctx.KVStore(q.storeKey), types.GetContractStorePrefix(contractAddr))
 	fmt.Printf("Dumping all keys for: %s\n", q.storeKey.Name())
+	fmt.Printf("Contract address prefix key is: %s\n", parseWeaveKey(types.GetContractStorePrefix(contractAddr)))
 	pageRes, err := query.FilteredPaginate(prefixStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
 		fmt.Printf("Key is %s\n", parseWeaveKey(key))
 		//r = append(r, types.Model{
