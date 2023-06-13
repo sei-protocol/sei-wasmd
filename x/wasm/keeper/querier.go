@@ -3,6 +3,7 @@ package keeper
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 	"runtime/debug"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -127,10 +128,15 @@ func (q grpcQuerier) AllContractState(c context.Context, req *types.QueryAllCont
 	prefixStore := prefix.NewStore(ctx.KVStore(q.storeKey), types.GetContractStorePrefix(contractAddr))
 	pageRes, err := query.FilteredPaginate(prefixStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
 		if accumulate {
-			r = append(r, types.Model{
+			model := types.Model{
 				Key:   key,
 				Value: value,
-			})
+			}
+			fmt.Printf("Model is %s", model.String())
+			//r = append(r, types.Model{
+			//	Key:   key,
+			//	Value: value,
+			//})
 		}
 		return true, nil
 	})
