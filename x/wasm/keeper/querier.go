@@ -127,17 +127,15 @@ func (q grpcQuerier) AllContractState(c context.Context, req *types.QueryAllCont
 	r := make([]types.Model, 0)
 	prefixStore := prefix.NewStore(ctx.KVStore(q.storeKey), types.GetContractStorePrefix(contractAddr))
 	pageRes, err := query.FilteredPaginate(prefixStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
-		if accumulate {
-			model := types.Model{
-				Key:   key,
-				Value: value,
-			}
-			fmt.Printf("Model is %s", model.String())
-			//r = append(r, types.Model{
-			//	Key:   key,
-			//	Value: value,
-			//})
+		model := types.Model{
+			Key:   key,
+			Value: value,
 		}
+		fmt.Printf("Model is %s\n", model.String())
+		//r = append(r, types.Model{
+		//	Key:   key,
+		//	Value: value,
+		//})
 		return true, nil
 	})
 	if err != nil {
