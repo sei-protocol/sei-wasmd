@@ -1,10 +1,13 @@
 package keeper
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"runtime/debug"
+	"strings"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	"google.golang.org/grpc/codes"
@@ -126,13 +129,9 @@ func (q grpcQuerier) AllContractState(c context.Context, req *types.QueryAllCont
 
 	r := make([]types.Model, 0)
 	prefixStore := prefix.NewStore(ctx.KVStore(q.storeKey), types.GetContractStorePrefix(contractAddr))
-	fmt.Printf("Store key is: %s\n", q.storeKey.String())
+	fmt.Printf("Dumping all keys for: %s\n", q.storeKey.Name())
 	pageRes, err := query.FilteredPaginate(prefixStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
-		model := types.Model{
-			Key:   key,
-			Value: value,
-		}
-		fmt.Printf("Model is %v\n", model.Key)
+		fmt.Printf("Key is %s\n", parseWeaveKey(key))
 		//r = append(r, types.Model{
 		//	Key:   key,
 		//	Value: value,
@@ -146,6 +145,26 @@ func (q grpcQuerier) AllContractState(c context.Context, req *types.QueryAllCont
 		Models:     r,
 		Pagination: pageRes,
 	}, nil
+}
+
+func parseWeaveKey(key []byte) string {
+	cut := bytes.IndexRune(key, ':')
+	if cut == -1 {
+		return encodeID(key)
+	}
+	prefix := key[:cut]
+	id := key[cut+1:]
+	return fmt.Sprintf("%s:%s", encodeID(prefix), encodeID(id))
+}
+
+// casts to a string if it is printable ascii, hex-encodes otherwise
+func encodeID(id []byte) string {
+	for _, b := range id {
+		if b < 0x20 || b >= 0x80 {
+			return strings.ToUpper(hex.EncodeToString(id))
+		}
+	}
+	return string(id)
 }
 
 func (q grpcQuerier) RawContractState(c context.Context, req *types.QueryRawContractStateRequest) (*types.QueryRawContractStateResponse, error) {
