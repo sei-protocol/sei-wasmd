@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 	"path/filepath"
@@ -20,9 +21,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	"github.com/tendermint/tendermint/libs/log"
 
+	"github.com/CosmWasm/wasmd/store/sized"
 	"github.com/CosmWasm/wasmd/x/wasm/ioutils"
 	"github.com/CosmWasm/wasmd/x/wasm/types"
 )
@@ -52,6 +55,7 @@ type WasmVMQueryHandler interface {
 type CoinTransferrer interface {
 	// TransferCoins sends the coin amounts from the source to the destination with rules applied.
 	TransferCoins(ctx sdk.Context, fromAddr sdk.AccAddress, toAddr sdk.AccAddress, amt sdk.Coins) error
+	TransferCoinsToModule(ctx sdk.Context, fromAddr sdk.AccAddress, recipientModule string, amt sdk.Coins) error
 }
 
 // WasmVMResponseHandler is an extension point to handles the response data returned by a contract call.
@@ -284,16 +288,20 @@ func (k Keeper) instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 	// 0x03 | BuildContractAddress (sdk.AccAddress)
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
 	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
+	sizedPrefixStore := sized.NewStore(prefixStore)
 
 	// prepare querier
 	querier := k.newQueryHandler(ctx, contractAddress)
 
 	// instantiate wasm contract
 	gas := k.runtimeGasForContract(ctx)
-	res, gasUsed, err := k.wasmVM.Instantiate(codeInfo.CodeHash, env, info, initMsg, prefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gas, costJSONDeserialization)
+	res, gasUsed, err := k.wasmVM.Instantiate(codeInfo.CodeHash, env, info, initMsg, sizedPrefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gas, costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if err != nil {
 		return nil, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
+	}
+	if err := k.updateSizeForContract(ctx, contractAddress, sizedPrefixStore); err != nil {
+		return nil, nil, sdkerrors.Wrap(types.ErrUpdateContractSize, err.Error())
 	}
 
 	// persist instance first
@@ -337,10 +345,12 @@ func (k Keeper) instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 // Execute executes the contract instance
 func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "execute")
+
 	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {
 		return nil, err
 	}
+	sizedPrefixStore := sized.NewStore(prefixStore)
 
 	executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeID), len(msg))
 	ctx.GasMeter().ConsumeGas(executeCosts, "Loading CosmWasm module: execute")
@@ -358,10 +368,13 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	// prepare querier
 	querier := k.newQueryHandler(ctx, contractAddress)
 	gas := k.runtimeGasForContract(ctx)
-	res, gasUsed, execErr := k.wasmVM.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gas, costJSONDeserialization)
+	res, gasUsed, execErr := k.wasmVM.Execute(codeInfo.CodeHash, env, info, msg, sizedPrefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gas, costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if execErr != nil {
 		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
+	}
+	if err := k.updateSizeForContract(ctx, contractAddress, sizedPrefixStore); err != nil {
+		return nil, sdkerrors.Wrap(types.ErrUpdateContractSize, err.Error())
 	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
@@ -418,11 +431,15 @@ func (k Keeper) migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
 	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
+	sizedPrefixStore := sized.NewStore(prefixStore)
 	gas := k.runtimeGasForContract(ctx)
-	res, gasUsed, err := k.wasmVM.Migrate(newCodeInfo.CodeHash, env, msg, &prefixStore, cosmwasmAPI, &querier, k.gasMeter(ctx), gas, costJSONDeserialization)
+	res, gasUsed, err := k.wasmVM.Migrate(newCodeInfo.CodeHash, env, msg, sizedPrefixStore, cosmwasmAPI, &querier, k.gasMeter(ctx), gas, costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if err != nil {
 		return nil, sdkerrors.Wrap(types.ErrMigrationFailed, err.Error())
+	}
+	if err := k.updateSizeForContract(ctx, contractAddress, sizedPrefixStore); err != nil {
+		return nil, sdkerrors.Wrap(types.ErrUpdateContractSize, err.Error())
 	}
 
 	// delete old secondary index entry
@@ -456,6 +473,7 @@ func (k Keeper) Sudo(ctx sdk.Context, contractAddress sdk.AccAddress, msg []byte
 	if err != nil {
 		return nil, err
 	}
+	sizedPrefixStore := sized.NewStore(prefixStore)
 
 	sudoSetupCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeID), len(msg))
 	ctx.GasMeter().ConsumeGas(sudoSetupCosts, "Loading CosmWasm module: sudo")
@@ -465,10 +483,13 @@ func (k Keeper) Sudo(ctx sdk.Context, contractAddress sdk.AccAddress, msg []byte
 	// prepare querier
 	querier := k.newQueryHandler(ctx, contractAddress)
 	gas := k.runtimeGasForContract(ctx)
-	res, gasUsed, execErr := k.wasmVM.Sudo(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gas, costJSONDeserialization)
+	res, gasUsed, execErr := k.wasmVM.Sudo(codeInfo.CodeHash, env, msg, sizedPrefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gas, costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if execErr != nil {
 		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
+	}
+	if err := k.updateSizeForContract(ctx, contractAddress, sizedPrefixStore); err != nil {
+		return nil, sdkerrors.Wrap(types.ErrUpdateContractSize, err.Error())
 	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
@@ -490,6 +511,7 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply was
 	if err != nil {
 		return nil, err
 	}
+	sizedPrefixStore := sized.NewStore(prefixStore)
 
 	// always consider this pinned
 	replyCosts := k.gasRegister.ReplyCosts(true, reply)
@@ -500,10 +522,13 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply was
 	// prepare querier
 	querier := k.newQueryHandler(ctx, contractAddress)
 	gas := k.runtimeGasForContract(ctx)
-	res, gasUsed, execErr := k.wasmVM.Reply(codeInfo.CodeHash, env, reply, prefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gas, costJSONDeserialization)
+	res, gasUsed, execErr := k.wasmVM.Reply(codeInfo.CodeHash, env, reply, sizedPrefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gas, costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if execErr != nil {
 		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
+	}
+	if err := k.updateSizeForContract(ctx, contractAddress, sizedPrefixStore); err != nil {
+		return nil, sdkerrors.Wrap(types.ErrUpdateContractSize, err.Error())
 	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
@@ -1005,6 +1030,111 @@ func (k Keeper) newQueryHandler(ctx sdk.Context, contractAddress sdk.AccAddress)
 	return NewQueryHandler(ctx, k.wasmVMQueryHandler, contractAddress, k.gasRegister)
 }
 
+func (k Keeper) updateSizeForContract(ctx sdk.Context, contractAddress sdk.AccAddress, sizedStore *sized.Store) error {
+	// always charge rent first before updating size, as the charging logic assumes constant size since last
+	// charged block
+	if err := k.chargeRent(ctx, contractAddress); err != nil {
+		return err
+	}
+	sizeChange := sizedStore.GetSizeChanged()
+	sizeKey := types.GetContractStoreSizePrefix(contractAddress)
+	store := ctx.KVStore(k.storeKey)
+	currentSize, err := k.getCurrentSizeForContract(ctx, contractAddress)
+	if err != nil {
+		return err
+	}
+	currentSizeSigned := int64(currentSize) + sizeChange
+	if currentSizeSigned < 0 {
+		// this should not happen
+		panic("negative size for contract")
+	}
+	newBz := make([]byte, 8)
+	binary.BigEndian.PutUint64(newBz, uint64(currentSizeSigned))
+	store.Set(sizeKey, newBz)
+	return nil
+}
+
+func (k Keeper) getCurrentSizeForContract(ctx sdk.Context, contractAddress sdk.AccAddress) (uint64, error) {
+	return GetSize(ctx, contractAddress, k.storeKey)
+}
+
+func (k Keeper) chargeRent(ctx sdk.Context, contractAddress sdk.AccAddress) error {
+	rentInfo, err := k.getRentInfo(ctx, contractAddress)
+	if err != nil {
+		return err
+	}
+	duration := uint64(ctx.BlockHeight()) - rentInfo.LastChargedBlock
+	if duration == 0 {
+		// shortcut in the case of same block changes
+		k.setRentInfo(ctx, contractAddress, rentInfo)
+		return nil
+	}
+	size, err := k.getCurrentSizeForContract(ctx, contractAddress)
+	if err != nil {
+		return err
+	}
+	if size == 0 {
+		k.setRentInfo(ctx, contractAddress, rentInfo)
+		return nil
+	}
+	rentPrice := k.GetParams(ctx).UnitRentPrice
+	rentToBeCharged := uint64(sdk.NewDec(int64(duration * size)).Mul(rentPrice).RoundInt().Int64())
+	if rentToBeCharged > rentInfo.Balance {
+		return errors.New("insufficient rent balance")
+	}
+	rentInfo.Balance -= rentToBeCharged
+	k.setRentInfo(ctx, contractAddress, rentInfo)
+	return nil
+}
+
+func (k Keeper) getRentInfo(ctx sdk.Context, contractAddress sdk.AccAddress) (*types.RentInfo, error) {
+	return GetRentInfo(ctx, contractAddress, k.storeKey)
+}
+
+func (k Keeper) setRentInfo(ctx sdk.Context, contractAddress sdk.AccAddress, rentInfo *types.RentInfo) {
+	store := ctx.KVStore(k.storeKey)
+	rentInfo.LastChargedBlock = uint64(ctx.BlockHeight())
+	store.Set(types.GetContractRentInfoPrefix(contractAddress), rentInfo.Marshal())
+}
+
+func (k Keeper) DepositRent(ctx sdk.Context, contractAddress sdk.AccAddress, senderAddress sdk.AccAddress, amount int64) error {
+	deposit := sdk.NewCoins(sdk.NewCoin(k.GetParams(ctx).RentDenom, sdk.NewInt(amount)))
+	if err := k.bank.TransferCoinsToModule(ctx, senderAddress, authtypes.FeeCollectorName, deposit); err != nil {
+		return err
+	}
+	rentInfo, err := k.getRentInfo(ctx, contractAddress)
+	if err != nil {
+		return err
+	}
+	rentInfo.Balance += uint64(amount)
+	k.setRentInfo(ctx, contractAddress, rentInfo)
+	return nil
+}
+
+func GetRentInfo(ctx sdk.Context, contractAddress sdk.AccAddress, storeKey sdk.StoreKey) (*types.RentInfo, error) {
+	store := ctx.KVStore(storeKey)
+	rentInfo := &types.RentInfo{}
+	rentInfoBz := store.Get(types.GetContractRentInfoPrefix(contractAddress))
+	if rentInfoBz == nil {
+		rentInfo.Balance = 0
+		rentInfo.LastChargedBlock = uint64(ctx.BlockHeight())
+	} else if err := rentInfo.Unmarshal(rentInfoBz); err != nil {
+		return rentInfo, err
+	}
+	return rentInfo, nil
+}
+
+func GetSize(ctx sdk.Context, contractAddress sdk.AccAddress, storeKey sdk.StoreKey) (uint64, error) {
+	sizeKey := types.GetContractStoreSizePrefix(contractAddress)
+	store := ctx.KVStore(storeKey)
+	bz := store.Get(sizeKey)
+	currentSize := uint64(0)
+	if bz != nil {
+		currentSize = binary.BigEndian.Uint64(bz)
+	}
+	return currentSize, nil
+}
+
 // MultipliedGasMeter wraps the GasMeter from context and multiplies all reads by out defined multiplier
 type MultipliedGasMeter struct {
 	originalMeter sdk.GasMeter
@@ -1077,6 +1207,18 @@ func (c BankCoinTransferrer) TransferCoins(parentCtx sdk.Context, fromAddr sdk.A
 			continue
 		}
 		parentCtx.EventManager().EmitEvent(e)
+	}
+	return nil
+}
+
+func (c BankCoinTransferrer) TransferCoinsToModule(ctx sdk.Context, fromAddr sdk.AccAddress, recipientModule string, amount sdk.Coins) error {
+	if err := c.keeper.IsSendEnabledCoins(ctx, amount...); err != nil {
+		return err
+	}
+
+	sdkerr := c.keeper.SendCoinsFromAccountToModule(ctx, fromAddr, recipientModule, amount)
+	if sdkerr != nil {
+		return sdkerr
 	}
 	return nil
 }

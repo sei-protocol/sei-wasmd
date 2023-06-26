@@ -306,3 +306,33 @@ func (msg MsgIBCCloseChannel) GetSignBytes() []byte {
 func (msg MsgIBCCloseChannel) GetSigners() []sdk.AccAddress {
 	return nil
 }
+
+func (msg MsgDepositRent) Route() string {
+	return RouterKey
+}
+
+func (msg MsgDepositRent) Type() string {
+	return "deposit-rent"
+}
+
+func (msg MsgDepositRent) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
+		return sdkerrors.Wrap(err, "sender")
+	}
+	if _, err := sdk.AccAddressFromBech32(msg.Contract); err != nil {
+		return sdkerrors.Wrap(err, "contract")
+	}
+	return nil
+}
+
+func (msg MsgDepositRent) GetSignBytes() []byte {
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
+}
+
+func (msg MsgDepositRent) GetSigners() []sdk.AccAddress {
+	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil { // should never happen as valid basic rejects invalid addresses
+		panic(err.Error())
+	}
+	return []sdk.AccAddress{senderAddr}
+}

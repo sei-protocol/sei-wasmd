@@ -119,3 +119,35 @@ func ClearContractAdminCmd() *cobra.Command {
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }
+
+func DepositRentCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "deposit-rent [contract_addr_bech32] [amount]",
+		Short:   "deposits rent for a contract",
+		Aliases: []string{"deposit"},
+		Args:    cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			amount, err := strconv.ParseUint(args[1], 10, 64)
+			if err != nil {
+				return err
+			}
+
+			msg := types.MsgDepositRent{
+				Sender:   clientCtx.GetFromAddress().String(),
+				Contract: args[0],
+				Amount:   amount,
+			}
+			if err := msg.ValidateBasic(); err != nil {
+				return err
+			}
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), &msg)
+		},
+	}
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}

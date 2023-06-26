@@ -252,6 +252,43 @@ func (q grpcQuerier) Codes(c context.Context, req *types.QueryCodesRequest) (*ty
 	return &types.QueryCodesResponse{CodeInfos: r, Pagination: pageRes}, nil
 }
 
+func (q grpcQuerier) RentInfo(c context.Context, req *types.QueryRentInfoRequest) (*types.QueryRentInfoResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "empty request")
+	}
+	contractAddr, err := sdk.AccAddressFromBech32(req.Address)
+	if err != nil {
+		return nil, err
+	}
+	ctx := sdk.UnwrapSDKContext(c)
+	rentInfo, err := GetRentInfo(ctx, contractAddr, q.storeKey)
+	if err != nil {
+		return nil, err
+	}
+	return &types.QueryRentInfoResponse{
+		Balance:          rentInfo.Balance,
+		LastChargedBlock: rentInfo.LastChargedBlock,
+	}, nil
+}
+
+func (q grpcQuerier) StateSize(c context.Context, req *types.QueryStateSizeRequest) (*types.QueryStateSizeResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "empty request")
+	}
+	contractAddr, err := sdk.AccAddressFromBech32(req.Address)
+	if err != nil {
+		return nil, err
+	}
+	ctx := sdk.UnwrapSDKContext(c)
+	size, err := GetSize(ctx, contractAddr, q.storeKey)
+	if err != nil {
+		return nil, err
+	}
+	return &types.QueryStateSizeResponse{
+		StateSize: size,
+	}, nil
+}
+
 func queryContractInfo(ctx sdk.Context, addr sdk.AccAddress, keeper types.ViewKeeper) (*types.QueryContractInfoResponse, error) {
 	info := keeper.GetContractInfo(ctx, addr)
 	if info == nil {

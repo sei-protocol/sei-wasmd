@@ -49,6 +49,15 @@ message Params {
   ];
   AccessType instantiate_default_permission = 2
       [ (gogoproto.moretags) = "yaml:\"instantiate_default_permission\"" ];
+  // rent price per byte per block
+  string unit_rent_price = 3
+    [
+      (gogoproto.moretags)   = "yaml:\"unit_gas_price\"",
+        (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Dec",
+        (gogoproto.nullable)   = false
+    ];
+  string rent_denom = 4
+    [ (gogoproto.moretags) = "yaml:\"rent_denom\"" ];
 }
 
 // CodeInfo is data for the uploaded contract WASM code

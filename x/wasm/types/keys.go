@@ -31,6 +31,8 @@ var (
 	ContractByCodeIDAndCreatedSecondaryIndexPrefix = []byte{0x06}
 	PinnedCodeIndexPrefix                          = []byte{0x07}
 	TXCounterPrefix                                = []byte{0x08}
+	ContractStoreSizePrefix                        = []byte{0x09}
+	ContractRentInfoPrefix                         = []byte{0x0A}
 
 	KeyLastCodeID     = append(SequenceKeyPrefix, []byte("lastCodeId")...)
 	KeyLastInstanceID = append(SequenceKeyPrefix, []byte("lastContractId")...)
@@ -50,6 +52,16 @@ func GetContractAddressKey(addr sdk.AccAddress) []byte {
 // GetContractStorePrefix returns the store prefix for the WASM contract instance
 func GetContractStorePrefix(addr sdk.AccAddress) []byte {
 	return append(ContractStorePrefix, addr...)
+}
+
+// GetContractStoreSizePrefix returns the store prefix for the total byte size of a contract instance
+func GetContractStoreSizePrefix(addr sdk.AccAddress) []byte {
+	return append(ContractStoreSizePrefix, addr...)
+}
+
+// GetContractRentInfoPrefix returns the store prefix for the remaining rents a contract instance
+func GetContractRentInfoPrefix(addr sdk.AccAddress) []byte {
+	return append(ContractRentInfoPrefix, addr...)
 }
 
 // GetContractByCreatedSecondaryIndexKey returns the key for the secondary index:

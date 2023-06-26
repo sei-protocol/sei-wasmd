@@ -185,3 +185,19 @@ func (m msgServer) ClearAdmin(goCtx context.Context, msg *types.MsgClearAdmin) (
 
 	return &types.MsgClearAdminResponse{}, nil
 }
+
+func (m msgServer) DepositRent(goCtx context.Context, msg *types.MsgDepositRent) (*types.MsgDepositRentResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "sender")
+	}
+	contractAddr, err := sdk.AccAddressFromBech32(msg.Contract)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "contract")
+	}
+	if err := m.keeper.DepositRent(ctx, contractAddr, senderAddr, int64(msg.Amount)); err != nil {
+		return nil, sdkerrors.Wrap(err, "deposit")
+	}
+	return &types.MsgDepositRentResponse{}, nil
+}

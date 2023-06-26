@@ -32,6 +32,7 @@ type BankKeeper interface {
 	IsSendEnabledCoins(ctx sdk.Context, coins ...sdk.Coin) error
 	BlockedAddr(addr sdk.AccAddress) bool
 	SendCoins(ctx sdk.Context, fromAddr sdk.AccAddress, toAddr sdk.AccAddress, amt sdk.Coins) error
+	SendCoinsFromAccountToModule(ctx sdk.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins) error
 }
 
 // AccountKeeper defines a subset of methods implemented by the cosmos-sdk account keeper
@@ -42,6 +43,8 @@ type AccountKeeper interface {
 	GetAccount(ctx sdk.Context, addr sdk.AccAddress) authtypes.AccountI
 	// Set an account in the store.
 	SetAccount(ctx sdk.Context, acc authtypes.AccountI)
+	// Get module address
+	GetModuleAddress(moduleName string) sdk.AccAddress
 }
 
 // DistributionKeeper defines a subset of methods implemented by the cosmos-sdk distribution keeper
