@@ -390,7 +390,7 @@ func TestInstantiate(t *testing.T) {
 
 	gasAfter := ctx.GasMeter().GasConsumed()
 	if types.EnableGasVerification {
-		require.Equal(t, uint64(0x18db5), gasAfter-gasBefore)
+		require.Equal(t, uint64(0x1b4d4), gasAfter-gasBefore)
 	}
 
 	// ensure it is stored properly
@@ -407,6 +407,15 @@ func TestInstantiate(t *testing.T) {
 		Msg:       initMsgBz,
 	}}
 	assert.Equal(t, exp, keepers.WasmKeeper.GetContractHistory(ctx, gotContractAddr))
+
+	size, err := GetSize(ctx, gotContractAddr, keepers.WasmKeeper.storeKey)
+	require.Nil(t, err)
+	assert.Equal(t, uint64(185), size)
+
+	rentInfo, err := GetRentInfo(ctx, gotContractAddr, keepers.WasmKeeper.storeKey)
+	require.Nil(t, err)
+	assert.Equal(t, int64(0), rentInfo.Balance)
+	assert.Equal(t, uint64(ctx.BlockHeight()), rentInfo.LastChargedBlock)
 
 	// and events emitted
 	expEvt := sdk.Events{
@@ -470,6 +479,15 @@ func TestInstantiateWithDeposit(t *testing.T) {
 			require.NoError(t, err)
 			balances := bankKeeper.GetAllBalances(ctx, addr)
 			assert.Equal(t, deposit, balances)
+
+			size, err := GetSize(ctx, addr, keepers.WasmKeeper.storeKey)
+			require.Nil(t, err)
+			assert.Equal(t, uint64(185), size)
+
+			rentInfo, err := GetRentInfo(ctx, addr, keepers.WasmKeeper.storeKey)
+			require.Nil(t, err)
+			assert.Equal(t, int64(0), rentInfo.Balance)
+			assert.Equal(t, uint64(ctx.BlockHeight()), rentInfo.LastChargedBlock)
 		})
 	}
 }
@@ -567,11 +585,14 @@ func TestInstantiateWithContractDataResponse(t *testing.T) {
 func TestExecute(t *testing.T) {
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures)
 	accKeeper, keeper, bankKeeper := keepers.AccountKeeper, keepers.ContractKeeper, keepers.BankKeeper
+	params := keepers.WasmKeeper.GetParams(ctx)
+	params.RentDenom = "denom"
+	keepers.WasmKeeper.SetParams(ctx, params)
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	topUp := sdk.NewCoins(sdk.NewInt64Coin("denom", 5000))
-	creator := keepers.Faucet.NewFundedAccount(ctx, deposit.Add(deposit...)...)
-	fred := keepers.Faucet.NewFundedAccount(ctx, topUp...)
+	creator := keepers.Faucet.NewFundedAccount(ctx, deposit.Add(deposit...).Add(deposit...)...)
+	fred := keepers.Faucet.NewFundedAccount(ctx, topUp.Add(topUp...)...)
 
 	contractID, err := keeper.Create(ctx, creator, hackatomWasm, nil)
 	require.NoError(t, err)
@@ -588,6 +609,15 @@ func TestExecute(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "cosmos14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s4hmalr", addr.String())
 
+	size, err := GetSize(ctx, addr, keepers.WasmKeeper.storeKey)
+	require.Nil(t, err)
+	assert.Equal(t, uint64(185), size)
+
+	rentInfo, err := GetRentInfo(ctx, addr, keepers.WasmKeeper.storeKey)
+	require.Nil(t, err)
+	assert.Equal(t, int64(0), rentInfo.Balance)
+	assert.Equal(t, uint64(ctx.BlockHeight()), rentInfo.LastChargedBlock)
+
 	// ensure bob doesn't exist
 	bobAcct := accKeeper.GetAccount(ctx, bob)
 	require.Nil(t, bobAcct)
@@ -595,20 +625,47 @@ func TestExecute(t *testing.T) {
 	// ensure funder has reduced balance
 	creatorAcct := accKeeper.GetAccount(ctx, creator)
 	require.NotNil(t, creatorAcct)
-	// we started at 2*deposit, should have spent one above
-	assert.Equal(t, deposit, bankKeeper.GetAllBalances(ctx, creatorAcct.GetAddress()))
+	// we started at 3*deposit, should have spent one above
+	assert.Equal(t, deposit.Add(deposit...), bankKeeper.GetAllBalances(ctx, creatorAcct.GetAddress()))
 
 	// ensure contract has updated balance
 	contractAcct := accKeeper.GetAccount(ctx, addr)
 	require.NotNil(t, contractAcct)
 	assert.Equal(t, deposit, bankKeeper.GetAllBalances(ctx, contractAcct.GetAddress()))
 
+	// bump block height
+	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 2)
+
+	// insufficient rent
+	res, err := keepers.ContractKeeper.Execute(ctx.WithEventManager(sdk.NewEventManager()), addr, fred, []byte(`{"release":{}}`), topUp)
+	require.Error(t, err)
+	require.True(t, errors.Is(err, types.ErrInsufficientRent))
+
+	// deposit rent
+	err = keepers.WasmKeeper.DepositRent(ctx, addr, creator, 100000)
+	require.Nil(t, err)
+	rentInfo, err = GetRentInfo(ctx, addr, keepers.WasmKeeper.storeKey)
+	require.Nil(t, err)
+	assert.Equal(t, int64(99996), rentInfo.Balance)
+
 	// unauthorized - trialCtx so we don't change state
 	trialCtx := ctx.WithMultiStore(ctx.MultiStore().CacheWrap(keepers.WasmKeeper.storeKey).(sdk.MultiStore))
-	res, err := keepers.ContractKeeper.Execute(trialCtx, addr, creator, []byte(`{"release":{}}`), nil)
+	res, err = keepers.ContractKeeper.Execute(trialCtx, addr, creator, []byte(`{"release":{}}`), nil)
 	require.Error(t, err)
 	require.True(t, errors.Is(err, types.ErrExecuteFailed))
 	require.Equal(t, "Unauthorized: execute wasm contract failed", err.Error())
+
+	size, err = GetSize(ctx, addr, keepers.WasmKeeper.storeKey)
+	require.Nil(t, err)
+	assert.Equal(t, uint64(185), size)
+
+	rentInfo, err = GetRentInfo(ctx, addr, keepers.WasmKeeper.storeKey)
+	require.Nil(t, err)
+	assert.Equal(t, int64(99996), rentInfo.Balance)
+	assert.Equal(t, uint64(ctx.BlockHeight()), rentInfo.LastChargedBlock)
+
+	// bump block height
+	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 1)
 
 	// verifier can execute, and get proper gas amount
 	start := time.Now()
@@ -623,13 +680,13 @@ func TestExecute(t *testing.T) {
 	// make sure gas is properly deducted from ctx
 	gasAfter := ctx.GasMeter().GasConsumed()
 	if types.EnableGasVerification {
-		require.Equal(t, uint64(0x17cd2), gasAfter-gasBefore)
+		require.Equal(t, uint64(0x1b57a), gasAfter-gasBefore)
 	}
 	// ensure bob now exists and got both payments released
 	bobAcct = accKeeper.GetAccount(ctx, bob)
 	require.NotNil(t, bobAcct)
 	balance := bankKeeper.GetAllBalances(ctx, bobAcct.GetAddress())
-	assert.Equal(t, deposit.Add(topUp...), balance)
+	assert.Equal(t, deposit.Add(topUp...).Add(topUp...), balance)
 
 	// ensure contract has updated balance
 	contractAcct = accKeeper.GetAccount(ctx, addr)
@@ -641,6 +698,15 @@ func TestExecute(t *testing.T) {
 	expEvt := sdk.NewEvent("execute",
 		sdk.NewAttribute("_contract_address", addr.String()))
 	assert.Equal(t, expEvt, em.Events()[3], prettyEvents(t, em.Events()))
+
+	size, err = GetSize(ctx, addr, keepers.WasmKeeper.storeKey)
+	require.Nil(t, err)
+	assert.Equal(t, uint64(185), size)
+
+	rentInfo, err = GetRentInfo(ctx, addr, keepers.WasmKeeper.storeKey)
+	require.Nil(t, err)
+	assert.Equal(t, int64(99994), rentInfo.Balance)
+	assert.Equal(t, uint64(ctx.BlockHeight()), rentInfo.LastChargedBlock)
 
 	t.Logf("Duration: %v (%d gas)\n", diff, gasAfter-gasBefore)
 }

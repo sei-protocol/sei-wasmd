@@ -90,6 +90,9 @@ var (
 
 	// ErrUpdateContractSize error
 	ErrUpdateContractSize = sdkErrors.Register(DefaultCodespace, 28, "failed to update contract size")
+
+	// ErrInsufficientRent error
+	ErrInsufficientRent = sdkErrors.Register(DefaultCodespace, 29, "not enough rent balance left")
 )
 
 type ErrNoSuchContract struct {

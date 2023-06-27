@@ -236,7 +236,7 @@ message QueryRentInfoRequest {
 }
 
 message QueryRentInfoResponse {
-  uint64 balance = 1;
+  int64 balance = 1;
   uint64 last_charged_block = 2;
 }
 

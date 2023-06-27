@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"math"
 	"path/filepath"
@@ -300,8 +299,8 @@ func (k Keeper) instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 	if err != nil {
 		return nil, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
 	}
-	if err := k.updateSizeForContract(ctx, contractAddress, sizedPrefixStore); err != nil {
-		return nil, nil, sdkerrors.Wrap(types.ErrUpdateContractSize, err.Error())
+	if err := k.updateSizeForContract(ctx, contractAddress, sizedPrefixStore.GetSizeChanged()); err != nil {
+		return nil, nil, err
 	}
 
 	// persist instance first
@@ -373,8 +372,8 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	if execErr != nil {
 		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}
-	if err := k.updateSizeForContract(ctx, contractAddress, sizedPrefixStore); err != nil {
-		return nil, sdkerrors.Wrap(types.ErrUpdateContractSize, err.Error())
+	if err := k.updateSizeForContract(ctx, contractAddress, sizedPrefixStore.GetSizeChanged()); err != nil {
+		return nil, err
 	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
@@ -438,8 +437,8 @@ func (k Keeper) migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	if err != nil {
 		return nil, sdkerrors.Wrap(types.ErrMigrationFailed, err.Error())
 	}
-	if err := k.updateSizeForContract(ctx, contractAddress, sizedPrefixStore); err != nil {
-		return nil, sdkerrors.Wrap(types.ErrUpdateContractSize, err.Error())
+	if err := k.updateSizeForContract(ctx, contractAddress, sizedPrefixStore.GetSizeChanged()); err != nil {
+		return nil, err
 	}
 
 	// delete old secondary index entry
@@ -488,8 +487,8 @@ func (k Keeper) Sudo(ctx sdk.Context, contractAddress sdk.AccAddress, msg []byte
 	if execErr != nil {
 		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}
-	if err := k.updateSizeForContract(ctx, contractAddress, sizedPrefixStore); err != nil {
-		return nil, sdkerrors.Wrap(types.ErrUpdateContractSize, err.Error())
+	if err := k.updateSizeForContract(ctx, contractAddress, sizedPrefixStore.GetSizeChanged()); err != nil {
+		return nil, err
 	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
@@ -527,8 +526,8 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply was
 	if execErr != nil {
 		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}
-	if err := k.updateSizeForContract(ctx, contractAddress, sizedPrefixStore); err != nil {
-		return nil, sdkerrors.Wrap(types.ErrUpdateContractSize, err.Error())
+	if err := k.updateSizeForContract(ctx, contractAddress, sizedPrefixStore.GetSizeChanged()); err != nil {
+		return nil, err
 	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
@@ -1030,18 +1029,17 @@ func (k Keeper) newQueryHandler(ctx sdk.Context, contractAddress sdk.AccAddress)
 	return NewQueryHandler(ctx, k.wasmVMQueryHandler, contractAddress, k.gasRegister)
 }
 
-func (k Keeper) updateSizeForContract(ctx sdk.Context, contractAddress sdk.AccAddress, sizedStore *sized.Store) error {
+func (k Keeper) updateSizeForContract(ctx sdk.Context, contractAddress sdk.AccAddress, sizeChange int64) error {
 	// always charge rent first before updating size, as the charging logic assumes constant size since last
 	// charged block
 	if err := k.chargeRent(ctx, contractAddress); err != nil {
 		return err
 	}
-	sizeChange := sizedStore.GetSizeChanged()
 	sizeKey := types.GetContractStoreSizePrefix(contractAddress)
 	store := ctx.KVStore(k.storeKey)
 	currentSize, err := k.getCurrentSizeForContract(ctx, contractAddress)
 	if err != nil {
-		return err
+		return types.ErrUpdateContractSize.Wrap(err.Error())
 	}
 	currentSizeSigned := int64(currentSize) + sizeChange
 	if currentSizeSigned < 0 {
@@ -1074,16 +1072,23 @@ func (k Keeper) chargeRent(ctx sdk.Context, contractAddress sdk.AccAddress) erro
 		return err
 	}
 	if size == 0 {
+		rentInfo.LastChargedBlock = uint64(ctx.BlockHeight())
 		k.setRentInfo(ctx, contractAddress, rentInfo)
 		return nil
 	}
 	rentPrice := k.GetParams(ctx).UnitRentPrice
-	rentToBeCharged := uint64(sdk.NewDec(int64(duration * size)).Mul(rentPrice).RoundInt().Int64())
-	if rentToBeCharged > rentInfo.Balance {
-		return errors.New("insufficient rent balance")
+	rentToBeCharged := sdk.NewDec(int64(duration * size)).Mul(rentPrice).RoundInt().Int64()
+	// protect against overflow
+	if rentInfo.Balance < rentToBeCharged+math.MinInt64 {
+		rentInfo.Balance = math.MinInt64
+	} else {
+		rentInfo.Balance -= rentToBeCharged
 	}
-	rentInfo.Balance -= rentToBeCharged
+	rentInfo.LastChargedBlock = uint64(ctx.BlockHeight())
 	k.setRentInfo(ctx, contractAddress, rentInfo)
+	if rentInfo.Balance < 0 {
+		return types.ErrInsufficientRent
+	}
 	return nil
 }
 
@@ -1093,7 +1098,6 @@ func (k Keeper) getRentInfo(ctx sdk.Context, contractAddress sdk.AccAddress) (*t
 
 func (k Keeper) setRentInfo(ctx sdk.Context, contractAddress sdk.AccAddress, rentInfo *types.RentInfo) {
 	store := ctx.KVStore(k.storeKey)
-	rentInfo.LastChargedBlock = uint64(ctx.BlockHeight())
 	store.Set(types.GetContractRentInfoPrefix(contractAddress), rentInfo.Marshal())
 }
 
@@ -1106,7 +1110,7 @@ func (k Keeper) DepositRent(ctx sdk.Context, contractAddress sdk.AccAddress, sen
 	if err != nil {
 		return err
 	}
-	rentInfo.Balance += uint64(amount)
+	rentInfo.Balance += amount
 	k.setRentInfo(ctx, contractAddress, rentInfo)
 	return nil
 }
