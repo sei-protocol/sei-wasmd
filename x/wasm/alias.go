@@ -112,6 +112,8 @@ type (
 	MsgClearAdmin                  = types.MsgClearAdmin
 	MsgWasmIBCCall                 = types.MsgIBCSend
 	MsgClearAdminResponse          = types.MsgClearAdminResponse
+	MsgDepositRent                 = types.MsgDepositRent
+	MsgDepositRentResponse         = types.MsgDepositRentResponse
 	MsgServer                      = types.MsgServer
 	Model                          = types.Model
 	CodeInfo                       = types.CodeInfo

@@ -56,6 +56,9 @@ type ContractOpsKeeper interface {
 
 	// SetAccessConfig updates the access config of a code id.
 	SetAccessConfig(ctx sdk.Context, codeID uint64, config AccessConfig) error
+
+	// DepositRent deposits rent to a contract
+	DepositRent(ctx sdk.Context, contractAddress sdk.AccAddress, senderAddress sdk.AccAddress, amount int64) error
 }
 
 // IBCContractKeeper IBC lifecycle event handler

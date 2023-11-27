@@ -23,6 +23,8 @@ service Msg {
   rpc UpdateAdmin(MsgUpdateAdmin) returns (MsgUpdateAdminResponse);
   // ClearAdmin removes any admin stored for a smart contract
   rpc ClearAdmin(MsgClearAdmin) returns (MsgClearAdminResponse);
+  // DepositRent adds to the rent balance for a smart contract
+  rpc DepositRent(MsgDepositRent) returns (MsgDepositRentResponse);
 }
 
 // MsgStoreCode submit Wasm code to the system
@@ -133,3 +135,11 @@ message MsgClearAdmin {
 
 // MsgClearAdminResponse returns empty data
 message MsgClearAdminResponse {}
+
+message MsgDepositRent {
+  string contract = 1;
+  uint64 amount = 2;
+  string sender = 3;
+}
+
+message MsgDepositRentResponse {}

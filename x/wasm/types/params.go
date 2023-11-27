@@ -15,6 +15,8 @@ import (
 var (
 	ParamStoreKeyUploadAccess      = []byte("uploadAccess")
 	ParamStoreKeyInstantiateAccess = []byte("instantiateAccess")
+	ParamStoreKeyUnitRentPrice     = []byte("unitrentprice")
+	ParamStoreKeyRentDenom         = []byte("rentdenom")
 )
 
 var AllAccessTypes = []AccessType{
@@ -78,9 +80,11 @@ func (a AccessConfig) Equals(o AccessConfig) bool {
 }
 
 var (
-	DefaultUploadAccess = AllowEverybody
-	AllowEverybody      = AccessConfig{Permission: AccessTypeEverybody}
-	AllowNobody         = AccessConfig{Permission: AccessTypeNobody}
+	DefaultUploadAccess  = AllowEverybody
+	AllowEverybody       = AccessConfig{Permission: AccessTypeEverybody}
+	AllowNobody          = AccessConfig{Permission: AccessTypeNobody}
+	DefaultUnitRentPrice = sdk.NewDecWithPrec(1, 2) // 0.01
+	DefaultRentDenom     = "usei"
 )
 
 // ParamKeyTable returns the parameter key table.
@@ -93,6 +97,8 @@ func DefaultParams() Params {
 	return Params{
 		CodeUploadAccess:             AllowEverybody,
 		InstantiateDefaultPermission: AccessTypeEverybody,
+		UnitRentPrice:                DefaultUnitRentPrice,
+		RentDenom:                    DefaultRentDenom,
 	}
 }
 
@@ -109,6 +115,8 @@ func (p *Params) ParamSetPairs() paramtypes.ParamSetPairs {
 	return paramtypes.ParamSetPairs{
 		paramtypes.NewParamSetPair(ParamStoreKeyUploadAccess, &p.CodeUploadAccess, validateAccessConfig),
 		paramtypes.NewParamSetPair(ParamStoreKeyInstantiateAccess, &p.InstantiateDefaultPermission, validateAccessType),
+		paramtypes.NewParamSetPair(ParamStoreKeyUnitRentPrice, &p.UnitRentPrice, validateUnitRentPrice),
+		paramtypes.NewParamSetPair(ParamStoreKeyRentDenom, &p.RentDenom, validateRentDenom),
 	}
 }
 
@@ -119,6 +127,12 @@ func (p Params) ValidateBasic() error {
 	}
 	if err := validateAccessConfig(p.CodeUploadAccess); err != nil {
 		return errors.Wrap(err, "upload access")
+	}
+	if err := validateUnitRentPrice(p.UnitRentPrice); err != nil {
+		return errors.Wrap(err, "unit rent price")
+	}
+	if err := validateRentDenom(p.RentDenom); err != nil {
+		return errors.Wrap(err, "rent denom")
 	}
 	return nil
 }
@@ -145,6 +159,28 @@ func validateAccessType(i interface{}) error {
 		}
 	}
 	return sdkerrors.Wrapf(ErrInvalid, "unknown type: %q", a)
+}
+
+func validateUnitRentPrice(i interface{}) error {
+	p, ok := i.(sdk.Dec)
+	if !ok {
+		return fmt.Errorf("invalid parameter type: %T", i)
+	}
+	if !p.IsPositive() {
+		return fmt.Errorf("rent price must be positive but got %s", p.String())
+	}
+	return nil
+}
+
+func validateRentDenom(i interface{}) error {
+	d, ok := i.(string)
+	if !ok {
+		return fmt.Errorf("invalid parameter type: %T", i)
+	}
+	if d == "" {
+		return errors.New("rent denom cannot be empty")
+	}
+	return nil
 }
 
 func (a AccessConfig) ValidateBasic() error {

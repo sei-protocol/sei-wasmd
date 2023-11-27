@@ -58,6 +58,14 @@ service Query {
   rpc PinnedCodes(QueryPinnedCodesRequest) returns (QueryPinnedCodesResponse) {
     option (google.api.http).get = "/cosmwasm/wasm/v1/codes/pinned";
   }
+
+  rpc RentInfo(QueryRentInfoRequest) returns (QueryRentInfoResponse) {
+    option (google.api.http).get = "/cosmwasm/wasm/v1/rent/{address}";
+  }
+
+  rpc StateSize(QueryStateSizeRequest) returns (QueryStateSizeResponse) {
+    option (google.api.http).get = "/cosmwasm/wasm/v1/size/{address}";
+  }
 }
 
 // QueryContractInfoRequest is the request type for the Query/ContractInfo RPC
@@ -221,4 +229,21 @@ message QueryPinnedCodesResponse {
       [ (gogoproto.nullable) = false, (gogoproto.customname) = "CodeIDs" ];
   // pagination defines the pagination in the response.
   cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+message QueryRentInfoRequest {
+  string address = 1;
+}
+
+message QueryRentInfoResponse {
+  int64 balance = 1;
+  uint64 last_charged_block = 2;
+}
+
+message QueryStateSizeRequest {
+  string address = 1;
+}
+
+message QueryStateSizeResponse {
+  uint64 state_size = 1;
 }

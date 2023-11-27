@@ -38,6 +38,8 @@ func GetQueryCmd() *cobra.Command {
 		GetCmdGetContractState(),
 		GetCmdListPinnedCode(),
 		GetCmdLibVersion(),
+		GetCmdGetRentInfo(),
+		GetCmdGetStateSize(),
 	)
 	return queryCmd
 }
@@ -478,6 +480,78 @@ func GetCmdListPinnedCode() *cobra.Command {
 	}
 	flags.AddQueryFlagsToCmd(cmd)
 	flags.AddPaginationFlagsToCmd(cmd, "list codes")
+	return cmd
+}
+
+func GetCmdGetRentInfo() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "rent-info [bech32_address]",
+		Short:   "Gets the rent info for a contract given its address",
+		Long:    "Gets the rent info for a contract given its address",
+		Aliases: []string{"rent"},
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			_, err = sdk.AccAddressFromBech32(args[0])
+			if err != nil {
+				return err
+			}
+			queryClient := types.NewQueryClient(clientCtx)
+			res, err := queryClient.RentInfo(
+				context.Background(),
+				&types.QueryRentInfoRequest{
+					Address: args[0],
+				},
+			)
+			if err != nil {
+				return err
+			}
+
+			return clientCtx.PrintProto(res)
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+func GetCmdGetStateSize() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "state-size [bech32_address]",
+		Short:   "Gets total number of bytes for a contract state given its address",
+		Long:    "Gets total number of bytes for a contract state given its address",
+		Aliases: []string{"ss"},
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			_, err = sdk.AccAddressFromBech32(args[0])
+			if err != nil {
+				return err
+			}
+			queryClient := types.NewQueryClient(clientCtx)
+			res, err := queryClient.StateSize(
+				context.Background(),
+				&types.QueryStateSizeRequest{
+					Address: args[0],
+				},
+			)
+			if err != nil {
+				return err
+			}
+
+			return clientCtx.PrintProto(res)
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
 	return cmd
 }
 
