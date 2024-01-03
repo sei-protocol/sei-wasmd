@@ -61,6 +61,7 @@ func (ws *WasmSnapshotter) Snapshot(height uint64, protoWriter protoio.Writer) e
 		hexHash := hex.EncodeToString(info.CodeHash)
 		// if seenBefore, just skip this one and move to the next
 		if seenBefore[hexHash] {
+			fmt.Printf("[Debug] Skipped wasm contract code %d \n", id)
 			return false
 		}
 		seenBefore[hexHash] = true

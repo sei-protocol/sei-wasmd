@@ -786,7 +786,7 @@ func (k Keeper) IterateCodeInfos(ctx sdk.Context, cb func(uint64, types.CodeInfo
 		fmt.Printf("[Debug] Found next wasm contract code %d \n", id)
 		// cb returns true to stop early
 		if cb(id, c) {
-			return
+			break
 		}
 	}
 	fmt.Printf("[Debug] Finished iterating all code infos \n")
