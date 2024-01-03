@@ -782,11 +782,14 @@ func (k Keeper) IterateCodeInfos(ctx sdk.Context, cb func(uint64, types.CodeInfo
 	for ; iter.Valid(); iter.Next() {
 		var c types.CodeInfo
 		k.cdc.MustUnmarshal(iter.Value(), &c)
+		id := binary.BigEndian.Uint64(iter.Key())
+		fmt.Printf("[Debug] Found next wasm contract code %d \n", id)
 		// cb returns true to stop early
-		if cb(binary.BigEndian.Uint64(iter.Key()), c) {
+		if cb(id, c) {
 			return
 		}
 	}
+	fmt.Printf("[Debug] Finished iterating all code infos \n")
 }
 
 func (k Keeper) GetByteCode(ctx sdk.Context, codeID uint64) ([]byte, error) {

@@ -65,29 +65,29 @@ func (ws *WasmSnapshotter) Snapshot(height uint64, protoWriter protoio.Writer) e
 		}
 		seenBefore[hexHash] = true
 
-		fmt.Printf("Loading wasm contract code %d \n", id)
+		fmt.Printf("[Debug] Loading wasm contract code %d \n", id)
 		// load code and abort on error
 		wasmBytes, err := ws.wasm.GetByteCode(ctx, id)
 		if err != nil {
 			rerr = err
-			fmt.Printf("Failed to load wasm contract code %d, error %s\n", id, err)
+			fmt.Printf("[Debug] Failed to load wasm contract code %d, error %s\n", id, err)
 			return true
 		}
 
 		compressedWasm, err := ioutils.GzipIt(wasmBytes)
 		if err != nil {
 			rerr = err
-			fmt.Printf("Failed to load wasm contract code %d, error %s\n", id, err)
+			fmt.Printf("[Debug] Failed to load wasm contract code %d, error %s\n", id, err)
 			return true
 		}
 
 		err = snapshot.WriteExtensionItem(protoWriter, compressedWasm)
 		if err != nil {
 			rerr = err
-			fmt.Printf("Failed to load wasm contract code %d, error %s\n", id, err)
+			fmt.Printf("[Debug] Failed to load wasm contract code %d, error %s\n", id, err)
 			return true
 		}
-		fmt.Printf("Finished loading wasm contract code %d \n", id)
+		fmt.Printf("[Debug] Finished loading wasm contract code %d \n", id)
 
 		return false
 	})
