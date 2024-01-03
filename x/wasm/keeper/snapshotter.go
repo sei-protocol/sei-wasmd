@@ -87,6 +87,7 @@ func (ws *WasmSnapshotter) Snapshot(height uint64, protoWriter protoio.Writer) e
 			fmt.Printf("Failed to load wasm contract code %d, error %s\n", id, err)
 			return true
 		}
+		fmt.Printf("Finished loading wasm contract code %d \n", id)
 
 		return false
 	})
