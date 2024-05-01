@@ -2,7 +2,6 @@ package keeper
 
 import (
 	"encoding/hex"
-	"fmt"
 	"io"
 
 	snapshot "github.com/cosmos/cosmos-sdk/snapshots/types"
@@ -73,7 +72,7 @@ func (ws *WasmSnapshotter) Snapshot(height uint64, protoWriter protoio.Writer) e
 			return true
 		}
 		checksum, err := cosmwasm.CreateChecksum(wasmBytes)
-		fmt.Printf("[UDAYDEBUG] Processing Code Info checksum(wasmBytes): %x, err: %s\n", checksum, err)
+		ctx.Logger().Info("[UDAYDEBUG] Processing Code Info checksum(wasmBytes):", "checksum", checksum, "err", err)
 
 		compressedWasm, err := ioutils.GzipIt(wasmBytes)
 		if err != nil {
@@ -108,7 +107,7 @@ func restoreV1(ctx sdk.Context, k *Keeper, compressedCode []byte) error {
 		return sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
 	}
 	checksum, err := cosmwasm.CreateChecksum(wasmCode)
-	fmt.Printf("[UDAYDEBUG] restoring wasm code checksum(wasmBytes): %x, err: %s\n", checksum, err)
+	ctx.Logger().Info("[UDAYDEBUG] restoring wasm code checksum(wasmBytes):", "checksum", checksum, "err", err)
 
 	// FIXME: check which codeIDs the checksum matches??
 	_, err = k.wasmVM.Create(wasmCode)
