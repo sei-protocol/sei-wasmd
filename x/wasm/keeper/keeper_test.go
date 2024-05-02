@@ -290,7 +290,7 @@ func TestCreateWithSimulation(t *testing.T) {
 	ctx, keepers := CreateTestInput(t, false, SupportedFeatures)
 
 	ctx = ctx.WithBlockHeader(tmproto.Header{Height: 1}).
-		WithGasMeter(sdk.NewInfiniteGasMeter(1, 1))
+		WithGasMeter(sdk.NewInfiniteGasMeterWithMultiplier(ctx))
 
 	deposit := sdk.NewCoins(sdk.NewInt64Coin("denom", 100000))
 	creator := keepers.Faucet.NewFundedAccount(ctx, deposit...)
@@ -302,7 +302,7 @@ func TestCreateWithSimulation(t *testing.T) {
 
 	// then try to create it in non-simulation mode (should not fail)
 	ctx, keepers = CreateTestInput(t, false, SupportedFeatures)
-	ctx = ctx.WithGasMeter(sdk.NewGasMeter(10_000_000, 1, 1))
+	ctx = ctx.WithGasMeter(sdk.NewGasMeterWithMultiplier(ctx, 10_000_000))
 	creator = keepers.Faucet.NewFundedAccount(ctx, deposit...)
 	contractID, err = keepers.ContractKeeper.Create(ctx, creator, hackatomWasm, nil)
 
@@ -803,7 +803,7 @@ func TestExecuteWithCpuLoop(t *testing.T) {
 
 	// make sure we set a limit before calling
 	var gasLimit uint64 = 400_000
-	ctx = ctx.WithGasMeter(sdk.NewGasMeter(gasLimit, 1, 1))
+	ctx = ctx.WithGasMeter(sdk.NewGasMeterWithMultiplier(ctx, gasLimit))
 	require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
 	// ensure we get an out of gas panic
@@ -844,7 +844,7 @@ func TestExecuteWithStorageLoop(t *testing.T) {
 
 	// make sure we set a limit before calling
 	var gasLimit uint64 = 400_002
-	ctx = ctx.WithGasMeter(sdk.NewGasMeter(gasLimit, 1, 1))
+	ctx = ctx.WithGasMeter(sdk.NewGasMeterWithMultiplier(ctx, gasLimit))
 	require.Equal(t, uint64(0), ctx.GasMeter().GasConsumed())
 
 	// ensure we get an out of gas panic
@@ -1587,7 +1587,7 @@ func TestPinnedContractLoops(t *testing.T) {
 			},
 		}, 0, nil
 	}
-	ctx = ctx.WithGasMeter(sdk.NewGasMeter(20000, 1, 1))
+	ctx = ctx.WithGasMeter(sdk.NewGasMeterWithMultiplier(ctx, 20000))
 	require.PanicsWithValue(t, sdk.ErrorOutOfGas{Descriptor: "ReadFlat"}, func() {
 		_, err := k.execute(ctx, example.Contract, RandomAccountAddress(t), anyMsg, nil)
 		require.NoError(t, err)
