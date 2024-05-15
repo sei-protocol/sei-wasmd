@@ -402,7 +402,7 @@ func createTestInput(
 	)
 	am.RegisterServices(module.NewConfigurator(appCodec, msgRouter, querier))
 	types.RegisterMsgServer(msgRouter, NewMsgServerImpl(NewDefaultPermissionKeeper(keeper)))
-	types.RegisterQueryServer(querier, NewGrpcQuerier(appCodec, keys[types.ModuleName], keeper, keeper.queryGasLimit))
+	types.RegisterQueryServer(querier, NewGrpcQuerier(appCodec, keys[types.ModuleName], keeper, keeper.queryGasLimit, keeper.paramsKeeper))
 
 	govRouter := govtypes.NewRouter().
 		AddRoute(govtypes.RouterKey, govtypes.ProposalHandler).

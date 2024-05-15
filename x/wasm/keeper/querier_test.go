@@ -541,7 +541,7 @@ func TestQueryContractInfo(t *testing.T) {
 	govtypes.RegisterInterfaces(keepers.EncodingConfig.InterfaceRegistry)
 
 	k := keepers.WasmKeeper
-	querier := NewGrpcQuerier(k.cdc, k.storeKey, k, k.queryGasLimit)
+	querier := NewGrpcQuerier(k.cdc, k.storeKey, k, k.queryGasLimit, k.paramsKeeper)
 	myExtension := func(info *types.ContractInfo) {
 		// abuse gov proposal as a random protobuf extension with an Any type
 		myExt, err := govtypes.NewProposal(&govtypes.TextProposal{Title: "foo", Description: "bar"}, 1, anyDate, anyDate, false)
