@@ -1056,7 +1056,7 @@ func moduleLogger(ctx sdk.Context) log.Logger {
 
 // Querier creates a new grpc querier instance
 func Querier(k *Keeper) *grpcQuerier { //nolint:revive
-	return NewGrpcQuerier(k.cdc, k.storeKey, k, k.queryGasLimit, paramsKeeper)
+	return NewGrpcQuerier(k.cdc, k.storeKey, k, k.queryGasLimit, k.paramsKeeper)
 }
 
 // QueryGasLimit returns the gas limit for smart queries.

@@ -174,9 +174,10 @@ func (q grpcQuerier) SmartContractState(c context.Context, req *types.QuerySmart
 		return nil, err
 	}
 	ctx := sdk.UnwrapSDKContext(c)
-	// get params from store
-
-	ctx = ctx.WithGasMeter(sdk.NewGasMeterWithMultiplier(ctx, q.queryGasLimit))
+	// get cosmos gas params
+	gasParams := q.paramsKeeper.GetCosmosGasParams(ctx)
+	// set gas meter with appropriate multiplier
+	ctx = ctx.WithGasMeter(sdk.NewGasMeter(q.queryGasLimit, gasParams.CosmosGasMultiplierNumerator, gasParams.CosmosGasMultiplierDenominator))
 	// recover from out-of-gas panic
 	defer func() {
 		if r := recover(); r != nil {
