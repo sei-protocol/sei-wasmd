@@ -94,6 +94,7 @@ type Keeper struct {
 func NewKeeper(
 	cdc codec.Codec,
 	storeKey sdk.StoreKey,
+	paramsKeeper types.ParamsKeeper,
 	paramSpace paramtypes.Subspace,
 	accountKeeper types.AccountKeeper,
 	bankKeeper types.BankKeeper,
@@ -122,6 +123,7 @@ func NewKeeper(
 	keeper := &Keeper{
 		storeKey:          storeKey,
 		cdc:               cdc,
+		paramsKeeper:      paramsKeeper,
 		wasmVM:            NewVMWrapper(wasmer),
 		accountKeeper:     accountKeeper,
 		bank:              NewBankCoinTransferrer(bankKeeper),

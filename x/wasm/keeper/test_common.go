@@ -374,6 +374,7 @@ func createTestInput(
 	keeper := NewKeeper(
 		appCodec,
 		keys[types.StoreKey],
+		paramsKeeper,
 		subspace(types.ModuleName),
 		accountKeeper,
 		bankKeeper,
