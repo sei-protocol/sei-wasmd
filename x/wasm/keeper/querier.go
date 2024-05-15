@@ -24,11 +24,12 @@ type grpcQuerier struct {
 	storeKey      sdk.StoreKey
 	keeper        types.ViewKeeper
 	queryGasLimit sdk.Gas
+	paramsKeeper  types.ParamsKeeper
 }
 
 // NewGrpcQuerier constructor
-func NewGrpcQuerier(cdc codec.Codec, storeKey sdk.StoreKey, keeper types.ViewKeeper, queryGasLimit sdk.Gas) *grpcQuerier { //nolint:revive
-	return &grpcQuerier{cdc: cdc, storeKey: storeKey, keeper: keeper, queryGasLimit: queryGasLimit}
+func NewGrpcQuerier(cdc codec.Codec, storeKey sdk.StoreKey, keeper types.ViewKeeper, queryGasLimit sdk.Gas, paramsKeeper types.ParamsKeeper) *grpcQuerier { //nolint:revive
+	return &grpcQuerier{cdc: cdc, storeKey: storeKey, keeper: keeper, queryGasLimit: queryGasLimit, paramsKeeper: paramsKeeper}
 }
 
 func (q grpcQuerier) ContractInfo(c context.Context, req *types.QueryContractInfoRequest) (*types.QueryContractInfoResponse, error) {
@@ -173,6 +174,8 @@ func (q grpcQuerier) SmartContractState(c context.Context, req *types.QuerySmart
 		return nil, err
 	}
 	ctx := sdk.UnwrapSDKContext(c)
+	// get params from store
+
 	ctx = ctx.WithGasMeter(sdk.NewGasMeterWithMultiplier(ctx, q.queryGasLimit))
 	// recover from out-of-gas panic
 	defer func() {

@@ -77,6 +77,7 @@ type Keeper struct {
 	bank                  CoinTransferrer
 	portKeeper            types.PortKeeper
 	capabilityKeeper      types.CapabilityKeeper
+	paramsKeeper          types.ParamsKeeper
 	wasmVM                types.WasmerEngine
 	wasmVMQueryHandler    WasmVMQueryHandler
 	wasmVMResponseHandler WasmVMResponseHandler
@@ -943,7 +944,10 @@ func (k Keeper) runtimeGasForContract(ctx sdk.Context) uint64 {
 	if meter.Limit() == 0 { // infinite gas meter with limit=0 and not out of gas
 		return math.MaxUint64
 	}
-	return k.gasRegister.ToWasmVMGas(meter.Limit() - meter.GasConsumedToLimit())
+	absoluteGasDiff := (meter.Limit() - meter.GasConsumedToLimit())
+	numerator, denominator := meter.Multiplier()
+	appliedAdjustmentGas := absoluteGasDiff * denominator / numerator
+	return k.gasRegister.ToWasmVMGas(appliedAdjustmentGas)
 }
 
 func (k Keeper) consumeRuntimeGas(ctx sdk.Context, gas uint64) {
@@ -1052,7 +1056,7 @@ func moduleLogger(ctx sdk.Context) log.Logger {
 
 // Querier creates a new grpc querier instance
 func Querier(k *Keeper) *grpcQuerier { //nolint:revive
-	return NewGrpcQuerier(k.cdc, k.storeKey, k, k.queryGasLimit)
+	return NewGrpcQuerier(k.cdc, k.storeKey, k, k.queryGasLimit, paramsKeeper)
 }
 
 // QueryGasLimit returns the gas limit for smart queries.

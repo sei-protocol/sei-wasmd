@@ -99,6 +99,10 @@ type CapabilityKeeper interface {
 	AuthenticateCapability(ctx sdk.Context, capability *capabilitytypes.Capability, name string) bool
 }
 
+type ParamsKeeper interface {
+	// TODO: add functions for gas multiplier
+}
+
 // ICS20TransferPortSource is a subset of the ibc transfer keeper.
 type ICS20TransferPortSource interface {
 	GetPort(ctx sdk.Context) string
