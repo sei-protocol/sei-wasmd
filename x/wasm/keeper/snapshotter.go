@@ -52,7 +52,12 @@ func (ws *WasmSnapshotter) Snapshot(height uint64, protoWriter protoio.Writer) e
 	if err != nil {
 		return err
 	}
-
+	defer func() {
+		// We should close the multistore to avoid leaking resources.
+		if closer, ok := cacheMS.(io.Closer); ok {
+			_ = closer.Close()
+		}
+	}()
 	ctx := sdk.NewContext(cacheMS, tmproto.Header{}, false, log.NewNopLogger())
 	seenBefore := make(map[string]bool)
 	var rerr error
