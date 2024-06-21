@@ -3,6 +3,7 @@ package wasm
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math/rand"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -169,8 +170,12 @@ func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.
 // ExportGenesis returns the exported genesis state as raw bytes for the wasm
 // module.
 func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.RawMessage {
+	fmt.Println("In wasm ExportGenesis")
 	gs := ExportGenesis(ctx, am.keeper)
-	return cdc.MustMarshalJSON(gs)
+	fmt.Println("In wasm ExportGenesis after ExportGenesis")
+	marshalled := cdc.MustMarshalJSON(gs)
+	fmt.Println("In wasm ExportGenesis after marshalled")
+	return marshalled
 }
 
 // BeginBlock returns the begin blocker for the wasm module.
