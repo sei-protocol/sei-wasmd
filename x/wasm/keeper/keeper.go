@@ -655,6 +655,8 @@ func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []b
 	queryResult, gasUsed, qErr := k.wasmVM.Query(codeInfo.CodeHash, env, req, prefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), k.runtimeGasForContract(ctx), costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if qErr != nil {
+		// consume ALL remaining gas on error
+		k.consumeRemainingGas(ctx)
 		return nil, sdkerrors.Wrap(types.ErrQueryFailed, qErr.Error())
 	}
 
@@ -969,6 +971,15 @@ func (k Keeper) runtimeGasForContract(ctx sdk.Context) uint64 {
 func (k Keeper) consumeRuntimeGas(ctx sdk.Context, gas uint64) {
 	consumed := k.gasRegister.FromWasmVMGas(gas)
 	ctx.GasMeter().ConsumeGas(consumed, "wasm contract")
+	// throw OutOfGas error if we ran out (got exactly to zero due to better limit enforcing)
+	if ctx.GasMeter().IsOutOfGas() {
+		panic(sdk.ErrorOutOfGas{Descriptor: "Wasmer function execution"})
+	}
+}
+
+func (k Keeper) consumeRemainingGas(ctx sdk.Context) {
+	remainingGas := ctx.GasMeter().Limit() - ctx.GasMeter().GasConsumedToLimit()
+	ctx.GasMeter().ConsumeGas(remainingGas, "wasm contract")
 	// throw OutOfGas error if we ran out (got exactly to zero due to better limit enforcing)
 	if ctx.GasMeter().IsOutOfGas() {
 		panic(sdk.ErrorOutOfGas{Descriptor: "Wasmer function execution"})
