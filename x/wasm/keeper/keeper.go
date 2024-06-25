@@ -642,7 +642,7 @@ func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []b
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if qErr != nil {
 		// consume ALL remaining gas on error
-		// k.consumeRemainingGas(ctx)
+		k.consumeRemainingGas(ctx)
 		return nil, sdkerrors.Wrap(types.ErrQueryFailed, qErr.Error())
 	}
 
