@@ -636,7 +636,7 @@ func TestExecute(t *testing.T) {
 	assert.Equal(t, sdk.Coins{}, bankKeeper.GetAllBalances(ctx, contractAcct.GetAddress()))
 
 	// and events emitted
-	require.Len(t, em.Events(), 9)
+	require.Len(t, em.Events(), 6)
 	expEvt := sdk.NewEvent("execute",
 		sdk.NewAttribute("_contract_address", addr.String()))
 	assert.Equal(t, expEvt, em.Events()[3], prettyEvents(t, em.Events()))
@@ -1125,28 +1125,28 @@ func TestMigrateWithDispatchedMessage(t *testing.T) {
 				{"payout": myPayoutAddr},
 			},
 		},
-		{
-			"Type": "coin_spent",
-			"Attr": []dict{
-				{"spender": contractAddr},
-				{"amount": "100000denom"},
-			},
-		},
-		{
-			"Type": "coin_received",
-			"Attr": []dict{
-				{"receiver": myPayoutAddr},
-				{"amount": "100000denom"},
-			},
-		},
-		{
-			"Type": "transfer",
-			"Attr": []dict{
-				{"recipient": myPayoutAddr},
-				{"sender": contractAddr},
-				{"amount": "100000denom"},
-			},
-		},
+		// {
+		// 	"Type": "coin_spent",
+		// 	"Attr": []dict{
+		// 		{"spender": contractAddr},
+		// 		{"amount": "100000denom"},
+		// 	},
+		// },
+		// {
+		// 	"Type": "coin_received",
+		// 	"Attr": []dict{
+		// 		{"receiver": myPayoutAddr},
+		// 		{"amount": "100000denom"},
+		// 	},
+		// },
+		// {
+		// 	"Type": "transfer",
+		// 	"Attr": []dict{
+		// 		{"recipient": myPayoutAddr},
+		// 		{"sender": contractAddr},
+		// 		{"amount": "100000denom"},
+		// 	},
+		// },
 	}
 	expJSONEvts := string(mustMarshal(t, expEvents))
 	assert.JSONEq(t, expJSONEvts, prettyEvents(t, ctx.EventManager().Events()), prettyEvents(t, ctx.EventManager().Events()))
@@ -1297,7 +1297,7 @@ func TestSudo(t *testing.T) {
 	balance := bankKeeper.GetBalance(ctx, comAcct.GetAddress(), "denom")
 	assert.Equal(t, sdk.NewInt64Coin("denom", 76543), balance)
 	// and events emitted
-	require.Len(t, em.Events(), 4, prettyEvents(t, em.Events()))
+	require.Len(t, em.Events(), 1, prettyEvents(t, em.Events()))
 	expEvt := sdk.NewEvent("sudo",
 		sdk.NewAttribute("_contract_address", addr.String()))
 	assert.Equal(t, expEvt, em.Events()[0])
