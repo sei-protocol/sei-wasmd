@@ -178,6 +178,18 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 	return marshalled
 }
 
+func (am AppModule) StreamGenesis(ctx sdk.Context, cdc codec.JSONCodec) <-chan json.RawMessage {
+	ch := ExportGenesisStream(ctx, am.keeper)
+	chRaw := make(chan json.RawMessage)
+	go func() {
+		for genState := range ch {
+			chRaw <- cdc.MustMarshalJSON(genState)
+		}
+		close(chRaw)
+	}()
+	return chRaw
+}
+
 // BeginBlock returns the begin blocker for the wasm module.
 func (am AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
 
