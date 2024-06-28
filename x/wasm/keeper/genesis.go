@@ -129,6 +129,8 @@ func ExportGenesis(ctx sdk.Context, keeper *Keeper) *types.GenesisState {
 	return &genState
 }
 
+const GENESIS_STREAM_STATE_KV_LEN_THRESHOLD = 50000
+
 func ExportGenesisStream(ctx sdk.Context, keeper *Keeper) <-chan *types.GenesisState {
 	ch := make(chan *types.GenesisState)
 	go func() {
@@ -153,29 +155,34 @@ func ExportGenesisStream(ctx sdk.Context, keeper *Keeper) <-chan *types.GenesisS
 		})
 
 		fmt.Println("About to IterateContractInfo")
-		maxSize := 0
 		keeper.IterateContractInfo(ctx, func(addr sdk.AccAddress, contract types.ContractInfo) bool {
-			var genState types.GenesisState
+			// redact contract info
+			contract.Created = nil
 			var state []types.Model
 			keeper.IterateContractState(ctx, addr, func(key, value []byte) bool {
 				state = append(state, types.Model{Key: key, Value: value})
+				if len(state) > GENESIS_STREAM_STATE_KV_LEN_THRESHOLD {
+					var genState types.GenesisState
+					genState.Contracts = append(genState.Contracts, types.Contract{
+						ContractAddress: addr.String(),
+						ContractInfo:    contract,
+						ContractState:   state,
+					})
+					ch <- &genState
+					state = nil
+				}
 				return false
 			})
-			// redact contract info
-			contract.Created = nil
+			var genState types.GenesisState
 			genState.Contracts = append(genState.Contracts, types.Contract{
 				ContractAddress: addr.String(),
 				ContractInfo:    contract,
 				ContractState:   state,
 			})
-			if len(state) > maxSize || len(state) > 300000 {
-				fmt.Println("New max state size or large state", len(state), ", addr", addr.String())
-				maxSize = len(state)
-			}
 			ch <- &genState
 			return false
 		})
-		fmt.Println("Done with IterateContractInfo, max state size", maxSize)
+		fmt.Println("Done with IterateContractInfo")
 
 		for _, k := range [][]byte{types.KeyLastCodeID, types.KeyLastInstanceID} {
 			var genState types.GenesisState
