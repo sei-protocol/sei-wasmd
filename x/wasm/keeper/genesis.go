@@ -168,8 +168,8 @@ func ExportGenesisStream(ctx sdk.Context, keeper *Keeper) <-chan *types.GenesisS
 				ContractInfo:    contract,
 				ContractState:   state,
 			})
-			if len(state) > maxSize {
-				fmt.Println("New max state size", len(state))
+			if len(state) > maxSize || len(state) > 300000 {
+				fmt.Println("New max state size or large state", len(state), ", addr", addr.String())
 				maxSize = len(state)
 			}
 			ch <- &genState
