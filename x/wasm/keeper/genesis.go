@@ -1,6 +1,8 @@
 package keeper
 
 import (
+	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -150,6 +152,7 @@ func ExportGenesisStream(ctx sdk.Context, keeper *Keeper) <-chan *types.GenesisS
 			return false
 		})
 
+		fmt.Println("About to IterateContractInfo")
 		keeper.IterateContractInfo(ctx, func(addr sdk.AccAddress, contract types.ContractInfo) bool {
 			var genState types.GenesisState
 			var state []types.Model
@@ -167,6 +170,7 @@ func ExportGenesisStream(ctx sdk.Context, keeper *Keeper) <-chan *types.GenesisS
 			ch <- &genState
 			return false
 		})
+		fmt.Println("Done with IterateContractInfo")
 
 		for _, k := range [][]byte{types.KeyLastCodeID, types.KeyLastInstanceID} {
 			var genState types.GenesisState
