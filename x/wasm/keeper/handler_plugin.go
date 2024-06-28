@@ -66,12 +66,11 @@ func (h SDKMessageHandler) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddr
 		return ctx, nil, nil, err
 	}
 	for _, sdkMsg := range sdkMsgs {
-		rCtx, res, err := h.handleSdkMessage(ctx, contractAddr, sdkMsg)
+		resCtx, res, err := h.handleSdkMessage(ctx, contractAddr, sdkMsg)
 		if err != nil {
 			return ctx, nil, nil, err
 		}
-		ctx = rCtx
-		resCtx = rCtx
+		ctx = resCtx
 		// append data
 		data = append(data, res.Data)
 		// append events
