@@ -129,6 +129,8 @@ func ExportGenesis(ctx sdk.Context, keeper *Keeper) *types.GenesisState {
 	return &genState
 }
 
+const GENSIS_STATE_STREAM_BUF_THRESHOLD = 50000
+
 func ExportGenesisStream(ctx sdk.Context, keeper *Keeper) <-chan *types.GenesisState {
 	ch := make(chan *types.GenesisState)
 	go func() {
@@ -156,18 +158,29 @@ func ExportGenesisStream(ctx sdk.Context, keeper *Keeper) <-chan *types.GenesisS
 		keeper.IterateContractInfo(ctx, func(addr sdk.AccAddress, contract types.ContractInfo) bool {
 			// redact contract info
 			contract.Created = nil
+			var state []types.Model
 			keeper.IterateContractState(ctx, addr, func(key, value []byte) bool {
-				var state []types.Model
 				state = append(state, types.Model{Key: key, Value: value})
-				var genState types.GenesisState
-				genState.Contracts = append(genState.Contracts, types.Contract{
-					ContractAddress: addr.String(),
-					ContractInfo:    contract,
-					ContractState:   state,
-				})
-				ch <- &genState
+				if len(state) > GENSIS_STATE_STREAM_BUF_THRESHOLD {
+					var genState types.GenesisState
+					genState.Contracts = append(genState.Contracts, types.Contract{
+						ContractAddress: addr.String(),
+						ContractInfo:    contract,
+						ContractState:   state,
+					})
+					ch <- &genState
+					state = nil
+				}
 				return false
 			})
+			// flush any remaining state
+			var genState types.GenesisState
+			genState.Contracts = append(genState.Contracts, types.Contract{
+				ContractAddress: addr.String(),
+				ContractInfo:    contract,
+				ContractState:   state,
+			})
+			ch <- &genState
 			return false
 		})
 		fmt.Println("Done with IterateContractInfo")
