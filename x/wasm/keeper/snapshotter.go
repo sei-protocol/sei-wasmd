@@ -52,6 +52,7 @@ func (ws *WasmSnapshotter) Snapshot(height uint64, protoWriter protoio.Writer) e
 	if err != nil {
 		return err
 	}
+	defer cacheMS.Close()
 
 	ctx := sdk.NewContext(cacheMS, tmproto.Header{}, false, log.NewNopLogger())
 	seenBefore := make(map[string]bool)
@@ -87,7 +88,6 @@ func (ws *WasmSnapshotter) Snapshot(height uint64, protoWriter protoio.Writer) e
 
 		return false
 	})
-	cacheMS.Close()
 	return rerr
 }
 
