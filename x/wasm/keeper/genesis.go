@@ -140,6 +140,7 @@ func ExportGenesisStream(ctx sdk.Context, keeper *Keeper) <-chan *types.GenesisS
 
 		keeper.IterateCodeInfos(ctx, func(codeID uint64, info types.CodeInfo) bool {
 			var genState types.GenesisState
+			genState.Params = keeper.GetParams(ctx)
 			bytecode, err := keeper.GetByteCode(ctx, codeID)
 			if err != nil {
 				panic(err)
@@ -163,6 +164,7 @@ func ExportGenesisStream(ctx sdk.Context, keeper *Keeper) <-chan *types.GenesisS
 				state = append(state, types.Model{Key: key, Value: value})
 				if len(state) > GENSIS_STATE_STREAM_BUF_THRESHOLD {
 					var genState types.GenesisState
+					genState.Params = keeper.GetParams(ctx)
 					genState.Contracts = append(genState.Contracts, types.Contract{
 						ContractAddress: addr.String(),
 						ContractInfo:    contract,
@@ -175,6 +177,7 @@ func ExportGenesisStream(ctx sdk.Context, keeper *Keeper) <-chan *types.GenesisS
 			})
 			// flush any remaining state
 			var genState types.GenesisState
+			genState.Params = keeper.GetParams(ctx)
 			genState.Contracts = append(genState.Contracts, types.Contract{
 				ContractAddress: addr.String(),
 				ContractInfo:    contract,
@@ -187,6 +190,7 @@ func ExportGenesisStream(ctx sdk.Context, keeper *Keeper) <-chan *types.GenesisS
 
 		for _, k := range [][]byte{types.KeyLastCodeID, types.KeyLastInstanceID} {
 			var genState types.GenesisState
+			genState.Params = keeper.GetParams(ctx)
 			genState.Sequences = append(genState.Sequences, types.Sequence{
 				IDKey: k,
 				Value: keeper.PeekAutoIncrementID(ctx, k),
