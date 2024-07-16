@@ -36,6 +36,7 @@ func InitGenesis(ctx sdk.Context, keeper *Keeper, data types.GenesisState, staki
 			}
 		}
 	}
+	fmt.Println("Got maxCodeID = ", maxCodeID)
 
 	var maxContractID int
 	for i, contract := range data.Contracts {
@@ -49,8 +50,11 @@ func InitGenesis(ctx sdk.Context, keeper *Keeper, data types.GenesisState, staki
 		}
 		maxContractID = i + 1 // not ideal but max(contractID) is not persisted otherwise
 	}
+	fmt.Println("maxContractID = ", maxContractID)
 
+	fmt.Println("Iterating over data.Sequences = ", data.Sequences)
 	for i, seq := range data.Sequences {
+		fmt.Println("i = ", i, ", seq = ", seq)
 		err := keeper.importAutoIncrementID(ctx, seq.IDKey, seq.Value)
 		if err != nil {
 			return nil, sdkerrors.Wrapf(err, "sequence number %d", i)
@@ -58,7 +62,9 @@ func InitGenesis(ctx sdk.Context, keeper *Keeper, data types.GenesisState, staki
 	}
 
 	// sanity check seq values
+	fmt.Println("types.KeyLastCodeID = ", string(types.KeyLastCodeID))
 	seqVal := keeper.PeekAutoIncrementID(ctx, types.KeyLastCodeID)
+	fmt.Println("seqVal = ", seqVal)
 	if seqVal <= maxCodeID {
 		return nil, sdkerrors.Wrapf(types.ErrInvalid, "seq %s with value: %d must be greater than: %d ", string(types.KeyLastCodeID), seqVal, maxCodeID)
 	}
@@ -138,6 +144,17 @@ func ExportGenesisStream(ctx sdk.Context, keeper *Keeper) <-chan *types.GenesisS
 		genState.Params = keeper.GetParams(ctx)
 		ch <- &genState
 
+		// Needs to be first because there are invariant checks when importing that need sequences info
+		for _, k := range [][]byte{types.KeyLastCodeID, types.KeyLastInstanceID} {
+			var genState types.GenesisState
+			genState.Params = keeper.GetParams(ctx)
+			genState.Sequences = append(genState.Sequences, types.Sequence{
+				IDKey: k,
+				Value: keeper.PeekAutoIncrementID(ctx, k),
+			})
+			ch <- &genState
+		}
+
 		keeper.IterateCodeInfos(ctx, func(codeID uint64, info types.CodeInfo) bool {
 			var genState types.GenesisState
 			genState.Params = keeper.GetParams(ctx)
@@ -187,16 +204,6 @@ func ExportGenesisStream(ctx sdk.Context, keeper *Keeper) <-chan *types.GenesisS
 			return false
 		})
 		fmt.Println("Done with IterateContractInfo")
-
-		for _, k := range [][]byte{types.KeyLastCodeID, types.KeyLastInstanceID} {
-			var genState types.GenesisState
-			genState.Params = keeper.GetParams(ctx)
-			genState.Sequences = append(genState.Sequences, types.Sequence{
-				IDKey: k,
-				Value: keeper.PeekAutoIncrementID(ctx, k),
-			})
-			ch <- &genState
-		}
 
 		close(ch)
 	}()
