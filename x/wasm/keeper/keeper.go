@@ -642,6 +642,8 @@ func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []b
 	queryResult, gasUsed, qErr := k.wasmVM.Query(codeInfo.CodeHash, env, req, prefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), k.runtimeGasForContract(ctx), costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if qErr != nil {
+		// consume ALL remaining gas on error
+		k.consumeRemainingGas(ctx)
 		return nil, sdkerrors.Wrap(types.ErrQueryFailed, qErr.Error())
 	}
 
@@ -960,6 +962,11 @@ func (k Keeper) consumeRuntimeGas(ctx sdk.Context, gas uint64) {
 	if ctx.GasMeter().IsOutOfGas() {
 		panic(sdk.ErrorOutOfGas{Descriptor: "Wasmer function execution"})
 	}
+}
+
+func (k Keeper) consumeRemainingGas(ctx sdk.Context) {
+	remainingGas := ctx.GasMeter().Limit() - ctx.GasMeter().GasConsumedToLimit()
+	ctx.GasMeter().ConsumeGas(remainingGas, "wasm contract")
 }
 
 // generates a contract address from codeID + instanceID
