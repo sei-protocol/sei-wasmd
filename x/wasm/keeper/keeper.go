@@ -164,6 +164,7 @@ func (k Keeper) GetParams(ctx sdk.Context) types.Params {
 }
 
 func (k Keeper) SetParams(ctx sdk.Context, ps types.Params) {
+	fmt.Println("In x/wasm, keeper: trying to set params = ", ps)
 	k.paramSpace.SetParamSet(ctx, &ps)
 }
 
@@ -1007,6 +1008,7 @@ func (k Keeper) PeekAutoIncrementID(ctx sdk.Context, lastIDKey []byte) uint64 {
 
 func (k Keeper) importAutoIncrementID(ctx sdk.Context, lastIDKey []byte, val uint64) error {
 	store := ctx.KVStore(k.storeKey)
+	fmt.Println("lastIDKey = ", string(lastIDKey))
 	if store.Has(lastIDKey) {
 		return sdkerrors.Wrapf(types.ErrDuplicate, "autoincrement id: %s", string(lastIDKey))
 	}

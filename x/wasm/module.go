@@ -3,6 +3,7 @@ package wasm
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math/rand"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -74,6 +75,33 @@ func (b AppModuleBasic) ValidateGenesis(marshaler codec.JSONCodec, config client
 		return err
 	}
 	return ValidateGenesis(data)
+}
+
+func (am AppModuleBasic) ValidateGenesisStream(cdc codec.JSONCodec, config client.TxEncodingConfig, genesisCh <-chan json.RawMessage) error {
+	fmt.Println("In wasm ValidateGenesisStream")
+	var err error
+	doneCh := make(chan struct{})
+	genesisStateCh := make(chan GenesisState)
+	go func() {
+		err = types.ValidateGenesisStream(genesisStateCh)
+		doneCh <- struct{}{}
+	}()
+	go func() {
+		defer close(genesisStateCh)
+		for genesis := range genesisCh {
+			var data GenesisState
+			err_ := cdc.UnmarshalJSON(genesis, &data)
+			if err_ != nil {
+				err = err_
+				doneCh <- struct{}{}
+				return
+			}
+			genesisStateCh <- data
+		}
+	}()
+	<-doneCh
+	fmt.Println("done with wasm ValidateGenesisStream err = ", err)
+	return err
 }
 
 // RegisterRESTRoutes registers the REST routes for the wasm module.
@@ -170,7 +198,20 @@ func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.
 // module.
 func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.RawMessage {
 	gs := ExportGenesis(ctx, am.keeper)
-	return cdc.MustMarshalJSON(gs)
+	marshalled := cdc.MustMarshalJSON(gs)
+	return marshalled
+}
+
+func (am AppModule) StreamGenesis(ctx sdk.Context, cdc codec.JSONCodec) <-chan json.RawMessage {
+	ch := ExportGenesisStream(ctx, am.keeper)
+	chRaw := make(chan json.RawMessage)
+	go func() {
+		for genState := range ch {
+			chRaw <- cdc.MustMarshalJSON(genState)
+		}
+		close(chRaw)
+	}()
+	return chRaw
 }
 
 // BeginBlock returns the begin blocker for the wasm module.
