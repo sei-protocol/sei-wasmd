@@ -41,7 +41,6 @@ func (s GenesisState) ValidateBasic() error {
 }
 
 func (s GenesisState) ValidateBasicStream(dataCh chan GenesisState) error {
-	// just need one of them to return true for this one
 	if err := s.Params.ValidateBasic(); err != nil {
 		return sdkerrors.Wrap(err, "params")
 	}

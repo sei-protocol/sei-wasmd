@@ -1,8 +1,6 @@
 package keeper
 
 import (
-	"fmt"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -36,7 +34,6 @@ func InitGenesis(ctx sdk.Context, keeper *Keeper, data types.GenesisState, staki
 			}
 		}
 	}
-	fmt.Println("Got maxCodeID = ", maxCodeID)
 
 	var maxContractID int
 	for i, contract := range data.Contracts {
@@ -50,11 +47,8 @@ func InitGenesis(ctx sdk.Context, keeper *Keeper, data types.GenesisState, staki
 		}
 		maxContractID = i + 1 // not ideal but max(contractID) is not persisted otherwise
 	}
-	fmt.Println("maxContractID = ", maxContractID)
 
-	fmt.Println("Iterating over data.Sequences = ", data.Sequences)
 	for i, seq := range data.Sequences {
-		fmt.Println("i = ", i, ", seq = ", seq)
 		err := keeper.importAutoIncrementID(ctx, seq.IDKey, seq.Value)
 		if err != nil {
 			return nil, sdkerrors.Wrapf(err, "sequence number %d", i)
@@ -62,9 +56,7 @@ func InitGenesis(ctx sdk.Context, keeper *Keeper, data types.GenesisState, staki
 	}
 
 	// sanity check seq values
-	fmt.Println("types.KeyLastCodeID = ", string(types.KeyLastCodeID))
 	seqVal := keeper.PeekAutoIncrementID(ctx, types.KeyLastCodeID)
-	fmt.Println("seqVal = ", seqVal)
 	if seqVal <= maxCodeID {
 		return nil, sdkerrors.Wrapf(types.ErrInvalid, "seq %s with value: %d must be greater than: %d ", string(types.KeyLastCodeID), seqVal, maxCodeID)
 	}
@@ -172,7 +164,6 @@ func ExportGenesisStream(ctx sdk.Context, keeper *Keeper) <-chan *types.GenesisS
 			return false
 		})
 
-		fmt.Println("About to IterateContractInfo")
 		keeper.IterateContractInfo(ctx, func(addr sdk.AccAddress, contract types.ContractInfo) bool {
 			// redact contract info
 			contract.Created = nil
@@ -203,7 +194,6 @@ func ExportGenesisStream(ctx sdk.Context, keeper *Keeper) <-chan *types.GenesisS
 			ch <- &genState
 			return false
 		})
-		fmt.Println("Done with IterateContractInfo")
 
 		close(ch)
 	}()
