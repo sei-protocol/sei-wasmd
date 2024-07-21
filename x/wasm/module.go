@@ -202,7 +202,7 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 	return marshalled
 }
 
-func (am AppModule) StreamGenesis(ctx sdk.Context, cdc codec.JSONCodec) <-chan json.RawMessage {
+func (am AppModule) ExportGenesisStream(ctx sdk.Context, cdc codec.JSONCodec) <-chan json.RawMessage {
 	ch := ExportGenesisStream(ctx, am.keeper)
 	chRaw := make(chan json.RawMessage)
 	go func() {
