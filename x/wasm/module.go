@@ -3,7 +3,6 @@ package wasm
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"math/rand"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -78,7 +77,6 @@ func (b AppModuleBasic) ValidateGenesis(marshaler codec.JSONCodec, config client
 }
 
 func (am AppModuleBasic) ValidateGenesisStream(cdc codec.JSONCodec, config client.TxEncodingConfig, genesisCh <-chan json.RawMessage) error {
-	fmt.Println("In wasm ValidateGenesisStream")
 	var err error
 	doneCh := make(chan struct{})
 	genesisStateCh := make(chan GenesisState)
@@ -100,7 +98,6 @@ func (am AppModuleBasic) ValidateGenesisStream(cdc codec.JSONCodec, config clien
 		}
 	}()
 	<-doneCh
-	fmt.Println("done with wasm ValidateGenesisStream err = ", err)
 	return err
 }
 
