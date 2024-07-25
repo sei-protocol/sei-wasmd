@@ -3,6 +3,7 @@ package keeper
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 
@@ -45,6 +46,7 @@ func (q QueryHandler) Query(request wasmvmtypes.QueryRequest, gasLimit uint64) (
 	// set a limit for a subCtx
 	sdkGas := q.gasRegister.FromWasmVMGas(gasLimit)
 	// discard all changes/ events in subCtx by not committing the cached context
+	// TODO use min of sdkGas and parent gasLeft
 	subCtx, _ := q.Ctx.WithGasMeter(sdk.NewGasMeterWithMultiplier(q.Ctx, sdkGas)).CacheContext()
 
 	// make sure we charge the higher level context even on panic
@@ -53,6 +55,7 @@ func (q QueryHandler) Query(request wasmvmtypes.QueryRequest, gasLimit uint64) (
 	}()
 
 	res, err := q.Plugins.HandleQuery(subCtx, q.Caller, request)
+	fmt.Printf("[DEBUG] Gas Meter State and Error: %d, %d, %s\n", q.Ctx.GasMeter().GasConsumed(), q.Ctx.GasMeter().Limit(), err)
 	if err == nil {
 		// short-circuit, the rest is dealing with handling existing errors
 		return res, nil

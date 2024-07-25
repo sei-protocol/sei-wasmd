@@ -642,7 +642,9 @@ func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []b
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if qErr != nil {
 		// consume ALL remaining gas on error
-		k.consumeRemainingGas(ctx)
+		fmt.Printf("[DEBUG] QuerySmart failed: %s, gas meter info: %d, %d\n", qErr, ctx.GasMeter().GasConsumed(), ctx.GasMeter().Limit())
+		k.consumePenaltyGas(ctx)
+		fmt.Printf("[DEBUG] QuerySmart failed: %s, gas meter info: %d, %d\n", qErr, ctx.GasMeter().GasConsumed(), ctx.GasMeter().Limit())
 		return nil, sdkerrors.Wrap(types.ErrQueryFailed, qErr.Error())
 	}
 
@@ -963,9 +965,11 @@ func (k Keeper) consumeRuntimeGas(ctx sdk.Context, gas uint64) {
 	}
 }
 
-func (k Keeper) consumeRemainingGas(ctx sdk.Context) {
+func (k Keeper) consumePenaltyGas(ctx sdk.Context) {
+	flatPenaltyGas := uint64(20000)
 	remainingGas := ctx.GasMeter().Limit() - ctx.GasMeter().GasConsumedToLimit()
-	ctx.GasMeter().ConsumeGas(remainingGas, "wasm contract")
+	toConsume := min(flatPenaltyGas, remainingGas)
+	ctx.GasMeter().ConsumeGas(toConsume, "wasm contract")
 }
 
 // generates a contract address from codeID + instanceID

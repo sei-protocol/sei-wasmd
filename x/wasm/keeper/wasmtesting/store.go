@@ -27,3 +27,7 @@ func (m *mockCMS) Close() {
 func (m *mockCMS) Write() {
 	*m.committed = true
 }
+
+func (m *mockCMS) Close() {
+	m.CommitMultiStore.Close()
+}
