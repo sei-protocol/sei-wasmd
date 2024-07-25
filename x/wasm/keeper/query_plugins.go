@@ -3,7 +3,6 @@ package keeper
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 
@@ -55,7 +54,6 @@ func (q QueryHandler) Query(request wasmvmtypes.QueryRequest, gasLimit uint64) (
 	}()
 
 	res, err := q.Plugins.HandleQuery(subCtx, q.Caller, request)
-	fmt.Printf("[DEBUG] Gas Meter State and Error: %d, %d, %s\n", q.Ctx.GasMeter().GasConsumed(), q.Ctx.GasMeter().Limit(), err)
 	if err == nil {
 		// short-circuit, the rest is dealing with handling existing errors
 		return res, nil
