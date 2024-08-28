@@ -690,7 +690,7 @@ func checkAndIncreaseQueryStackSize(ctx sdk.Context, maxQueryStackSize uint32) (
 func checkAndIncreaseCallDepth(ctx sdk.Context, maxCallDepth uint32) (sdk.Context, error) {
 	var callDepth uint32
 
-	if size := ctx.Context().Value(contextKeyQueryStackSize); size != nil {
+	if size := ctx.Context().Value(contextKeyCallDepth); size != nil {
 		callDepth = size.(uint32)
 	} else {
 		callDepth = 0
