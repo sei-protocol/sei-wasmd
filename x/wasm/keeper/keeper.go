@@ -618,11 +618,9 @@ func (k Keeper) getLastContractHistoryEntry(ctx sdk.Context, contractAddr sdk.Ac
 	return r
 }
 
-// QuerySmartSafe queries the smart contract itself with a cached context and infinite gas meter.
+// QuerySmartSafe queries the smart contract itself with a cached context
 func (k Keeper) QuerySmartSafe(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte) ([]byte, error) {
-	// Create cache context and infinite gas meter
 	cacheCtx, _ := ctx.CacheContext()
-	cacheCtx = cacheCtx.WithGasMeter(sdk.NewInfiniteGasMeter(1, 1))
 	return k.QuerySmart(cacheCtx, contractAddr, req)
 }
 
