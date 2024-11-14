@@ -1092,8 +1092,7 @@ func (k Keeper) emitCW721OwnerBeforeTransferIfApplicable(ctx sdk.Context, contra
 				types.EventTypeCW721PreTransferOwner,
 				sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
 				sdk.NewAttribute(types.AttributeKeyTokenId, tokenID),
-				sdk.NewAttribute(types.AttributeKeyOwner, string("0x0000000000000000000000000000000000000000"),
-				)))
+				sdk.NewAttribute(types.AttributeKeyOwner, string("0x0000000000000000000000000000000000000000"))))
 		} else {
 			subMsg, ok := parsedMsg["transfer_nft"]
 			if !ok {
