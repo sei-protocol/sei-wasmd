@@ -1079,64 +1079,46 @@ func (k Keeper) emitCW721OwnerBeforeTransferIfApplicable(ctx sdk.Context, contra
 	if err := json.Unmarshal(msg, &parsedMsg); err != nil {
 		return
 	}
-	// For mint cases, we directly set owner to be 0x0
-	subMsg, ok := parsedMsg["mint"]
-	if ok {
-		parsedSubMsg := map[string]json.RawMessage{}
-		if err := json.Unmarshal(subMsg, &parsedSubMsg); err != nil {
+	subMsg, ok := parsedMsg["transfer_nft"]
+	if !ok {
+		subMsg, ok = parsedMsg["send_nft"]
+	}
+	if !ok {
+		subMsg, ok = parsedMsg["burn"]
+	}
+	if !ok {
+		return
+	}
+	parsedSubMsg := map[string]json.RawMessage{}
+	if err := json.Unmarshal(subMsg, &parsedSubMsg); err != nil {
+		return
+	}
+	if tokenBz, ok := parsedSubMsg["token_id"]; ok && len(tokenBz) > 2 {
+		tokenID := string(tokenBz[1 : len(tokenBz)-1])
+		ownerQuery := map[string]interface{}{"owner_of": map[string]string{
+			"token_id": tokenID,
+		}}
+		ownerQueryBz, err := json.Marshal(ownerQuery)
+		if err != nil {
 			return
 		}
-		if tokenBz, ok := parsedSubMsg["token_id"]; ok && len(tokenBz) > 2 {
-			tokenID := string(tokenBz[1 : len(tokenBz)-1])
+		resBz, err := k.QuerySmart(ctx.WithGasMeter(sdk.NewInfiniteGasMeterWithMultiplier(ctx)), contractAddress, ownerQueryBz)
+		if err != nil {
+			return
+		}
+		res := map[string]json.RawMessage{}
+		if err := json.Unmarshal(resBz, &res); err != nil {
+			return
+		}
+		if ownerBz, ok := res["owner"]; ok && len(ownerBz) > 2 {
 			ctx.EventManager().EmitEvent(sdk.NewEvent(
 				types.EventTypeCW721PreTransferOwner,
 				sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
 				sdk.NewAttribute(types.AttributeKeyTokenId, tokenID),
-				sdk.NewAttribute(types.AttributeKeyOwner, "")))
-		}
-	} else {
-		subMsg, ok := parsedMsg["transfer_nft"]
-		if !ok {
-			subMsg, ok = parsedMsg["send_nft"]
-		}
-		if !ok {
-			subMsg, ok = parsedMsg["burn"]
-		}
-		if !ok {
-			return
-		}
-		parsedSubMsg := map[string]json.RawMessage{}
-		if err := json.Unmarshal(subMsg, &parsedSubMsg); err != nil {
-			return
-		}
-		if tokenBz, ok := parsedSubMsg["token_id"]; ok && len(tokenBz) > 2 {
-			tokenID := string(tokenBz[1 : len(tokenBz)-1])
-			ownerQuery := map[string]interface{}{"owner_of": map[string]string{
-				"token_id": tokenID,
-			}}
-			ownerQueryBz, err := json.Marshal(ownerQuery)
-			if err != nil {
-				return
-			}
-			resBz, err := k.QuerySmart(ctx.WithGasMeter(sdk.NewInfiniteGasMeterWithMultiplier(ctx)), contractAddress, ownerQueryBz)
-			if err != nil {
-				return
-			}
-			res := map[string]json.RawMessage{}
-			if err := json.Unmarshal(resBz, &res); err != nil {
-				return
-			}
-			if ownerBz, ok := res["owner"]; ok && len(ownerBz) > 2 {
-				ctx.EventManager().EmitEvent(sdk.NewEvent(
-					types.EventTypeCW721PreTransferOwner,
-					sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
-					sdk.NewAttribute(types.AttributeKeyTokenId, tokenID),
-					sdk.NewAttribute(types.AttributeKeyOwner, string(ownerBz[1:len(ownerBz)-1])),
-				))
-			}
+				sdk.NewAttribute(types.AttributeKeyOwner, string(ownerBz[1:len(ownerBz)-1])),
+			))
 		}
 	}
-
 }
 
 // MultipliedGasMeter wraps the GasMeter from context and multiplies all reads by out defined multiplier
