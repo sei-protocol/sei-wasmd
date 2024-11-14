@@ -37,6 +37,7 @@ type contextKey int
 const (
 	// private type creates an interface key for Context that cannot be accessed by any other package
 	contextKeyQueryStackSize contextKey = iota
+	contextKeyCallDepth      contextKey = iota
 )
 
 // Option is an extension point to instantiate keeper with non default values
@@ -87,6 +88,7 @@ type Keeper struct {
 	paramSpace        paramtypes.Subspace
 	gasRegister       GasRegister
 	maxQueryStackSize uint32
+	maxCallDepth      uint32
 }
 
 // NewKeeper creates a new contract Keeper instance
@@ -134,11 +136,16 @@ func NewKeeper(
 		paramSpace:        paramSpace,
 		gasRegister:       NewDefaultWasmGasRegister(),
 		maxQueryStackSize: types.DefaultMaxQueryStackSize,
+		maxCallDepth:      types.DefaultMaxCallDepth,
 	}
 	keeper.wasmVMQueryHandler = DefaultQueryPlugins(bankKeeper, stakingKeeper, distKeeper, channelKeeper, queryRouter, keeper)
 	for _, o := range opts {
 		o.apply(keeper)
 	}
+
+	// always wrap the messenger, even if it was replaced by an option
+	keeper.messenger = callDepthMessageHandler{keeper.messenger, keeper.maxCallDepth}
+
 	// not updateable, yet
 	keeper.wasmVMResponseHandler = NewDefaultWasmVMContractResponseHandler(NewMessageDispatcher(keeper.messenger, keeper))
 	return *keeper
@@ -447,7 +454,7 @@ func (k Keeper) migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Data, res.Events, wasmvmtypes.MessageInfo{}, *newCodeInfo)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "dispatch")
+		return nil, err
 	}
 
 	return data, nil
@@ -611,6 +618,12 @@ func (k Keeper) getLastContractHistoryEntry(ctx sdk.Context, contractAddr sdk.Ac
 	return r
 }
 
+// QuerySmartSafe queries the smart contract itself with a cached context
+func (k Keeper) QuerySmartSafe(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte) ([]byte, error) {
+	cacheCtx, _ := ctx.CacheContext()
+	return k.QuerySmart(cacheCtx, contractAddr, req)
+}
+
 // QuerySmart queries the smart contract itself.
 func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "query-smart")
@@ -641,8 +654,10 @@ func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []b
 	queryResult, gasUsed, qErr := k.wasmVM.Query(codeInfo.CodeHash, env, req, prefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), k.runtimeGasForContract(ctx), costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if qErr != nil {
-		// consume ALL remaining gas on error
-		k.consumeRemainingGas(ctx)
+		// consume ALL remaining gas on error if the gasUsed is 0 due to error in consuming correct gas amount
+		if gasUsed == 0 {
+			k.consumeRemainingGas(ctx)
+		}
 		return nil, sdkerrors.Wrap(types.ErrQueryFailed, qErr.Error())
 	}
 
@@ -675,6 +690,29 @@ func checkAndIncreaseQueryStackSize(ctx sdk.Context, maxQueryStackSize uint32) (
 	// set updated stack size
 	ctx = ctx.WithContext(context.WithValue(ctx.Context(), contextKeyQueryStackSize, queryStackSize))
 
+	return ctx, nil
+}
+
+func checkAndIncreaseCallDepth(ctx sdk.Context, maxCallDepth uint32) (sdk.Context, error) {
+	var callDepth uint32
+
+	if size := ctx.Context().Value(contextKeyCallDepth); size != nil {
+		callDepth = size.(uint32)
+	} else {
+		callDepth = 0
+	}
+
+	// increase
+	callDepth++
+
+	// did we go too far?
+	if callDepth > maxCallDepth {
+		return sdk.Context{}, types.ErrExceedMaxCallDepth
+	}
+
+	ctx = ctx.WithContext(context.WithValue(ctx.Context(), contextKeyCallDepth, callDepth))
+
+	// set updated stack size
 	return ctx, nil
 }
 
@@ -1130,7 +1168,7 @@ func (h DefaultWasmVMContractResponseHandler) Handle(ctx sdk.Context, contractAd
 	result := origRspData
 	switch rsp, err := h.md.DispatchSubmessages(ctx, contractAddr, ibcPort, messages, info, codeInfo); {
 	case err != nil:
-		return nil, sdkerrors.Wrap(err, "submessages")
+		return nil, err
 	case rsp != nil:
 		result = rsp
 	}
