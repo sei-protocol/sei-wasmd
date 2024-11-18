@@ -418,6 +418,7 @@ func createTestInput(
 		accountKeeper,
 		bankKeeper,
 		stakingKeeper,
+		paramsKeeper,
 		govRouter,
 	)
 
