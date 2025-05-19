@@ -6,7 +6,7 @@ package api
 /*
 #include "bindings.h"
 
-// typedefs for _cgo152 functions (db)
+// typedefs for _cgo functions (db)
 typedef GoError152 (*read_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, UnmanagedVector *val, UnmanagedVector *errOut);
 typedef GoError152 (*write_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, U8SliceView val, UnmanagedVector *errOut);
 typedef GoError152 (*remove_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, UnmanagedVector *errOut);
@@ -21,19 +21,19 @@ typedef GoError152 (*canonicalize_address_fn)(api_t *ptr, U8SliceView src, Unman
 typedef GoError152 (*query_external_fn)(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
 
 // forward declarations (db)
-GoError152 cGet_cgo152(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, UnmanagedVector *val, UnmanagedVector *errOut);
-GoError152 cSet_cgo152(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, U8SliceView val, UnmanagedVector *errOut);
-GoError152 cDelete_cgo152(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, UnmanagedVector *errOut);
-GoError152 cScan_cgo152(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView start, U8SliceView end, int32_t order, GoIter *out, UnmanagedVector *errOut);
+GoError152 cGet152_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, UnmanagedVector *val, UnmanagedVector *errOut);
+GoError152 cSet152_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, U8SliceView val, UnmanagedVector *errOut);
+GoError152 cDelete152_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, UnmanagedVector *errOut);
+GoError152 cScan152_cgo(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView start, U8SliceView end, int32_t order, GoIter *out, UnmanagedVector *errOut);
 // iterator
-GoError152 cNext_cgo152(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, UnmanagedVector *key, UnmanagedVector *val, UnmanagedVector *errOut);
-GoError152 cNextKey_cgo152(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, UnmanagedVector *key, UnmanagedVector *errOut);
-GoError152 cNextValue_cgo152(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, UnmanagedVector *val, UnmanagedVector *errOut);
+GoError152 cNext152_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, UnmanagedVector *key, UnmanagedVector *val, UnmanagedVector *errOut);
+GoError152 cNextKey152_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, UnmanagedVector *key, UnmanagedVector *errOut);
+GoError152 cNextValue152_cgo(iterator_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, UnmanagedVector *val, UnmanagedVector *errOut);
 // api
-GoError152 cHumanAddress_cgo152(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
-GoError152 cCanonicalAddress_cgo152(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
+GoError152 cHumanAddress152_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
+GoError152 cCanonicalAddress152_cgo(api_t *ptr, U8SliceView src, UnmanagedVector *dest, UnmanagedVector *errOut, uint64_t *used_gas);
 // and querier
-GoError152 cQueryExternal_cgo152(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
+GoError152 cQueryExternal152_cgo(querier_t *ptr, uint64_t gas_limit, uint64_t *used_gas, U8SliceView request, UnmanagedVector *result, UnmanagedVector *errOut);
 
 
 */
@@ -97,10 +97,10 @@ func recoverPanic(ret *C.GoError152) {
 /****** DB ********/
 
 var db_vtable = C.Db_vtable{
-	read_db:   (C.read_db_fn)(C.cGet_cgo152),
-	write_db:  (C.write_db_fn)(C.cSet_cgo152),
-	remove_db: (C.remove_db_fn)(C.cDelete_cgo152),
-	scan_db:   (C.scan_db_fn)(C.cScan_cgo152),
+	read_db:   (C.read_db_fn)(C.cGet152_cgo),
+	write_db:  (C.write_db_fn)(C.cSet152_cgo),
+	remove_db: (C.remove_db_fn)(C.cDelete152_cgo),
+	scan_db:   (C.scan_db_fn)(C.cScan152_cgo),
 }
 
 type DBState struct {
@@ -132,9 +132,9 @@ func buildDB(state *DBState, gm *types.GasMeter) C.Db {
 }
 
 var iterator_vtable = C.Iterator_vtable{
-	next:       (C.db_next)(C.cNext_cgo152),
-	next_key:   (C.db_next_key)(C.cNextKey_cgo152),
-	next_value: (C.db_next_value)(C.cNextValue_cgo152),
+	next:       (C.db_next)(C.cNext152_cgo),
+	next_key:   (C.db_next_key)(C.cNextKey152_cgo),
+	next_value: (C.db_next_value)(C.cNextValue152_cgo),
 }
 
 // An iterator including referenced objects is 117 bytes large (calculated using https://github.com/DmitriyVTitov/size).
@@ -366,8 +366,8 @@ func nextPart(ref C.iterator_t, gasMeter *C.gas_meter_t, usedGas *cu64, output *
 }
 
 var api_vtable = C.GoApi_vtable{
-	humanize_address:     (C.humanize_address_fn)(C.cHumanAddress_cgo152),
-	canonicalize_address: (C.canonicalize_address_fn)(C.cCanonicalAddress_cgo152),
+	humanize_address:     (C.humanize_address_fn)(C.cHumanAddress152_cgo),
+	canonicalize_address: (C.canonicalize_address_fn)(C.cCanonicalAddress152_cgo),
 }
 
 // contract: original pointer/struct referenced must live longer than C.GoApi struct
@@ -437,7 +437,7 @@ func cCanonicalAddress152(ptr *C.api_t, src C.U8SliceView, dest *C.UnmanagedVect
 /****** Go Querier ********/
 
 var querier_vtable = C.Querier_vtable{
-	query_external: (C.query_external_fn)(C.cQueryExternal_cgo152),
+	query_external: (C.query_external_fn)(C.cQueryExternal152_cgo),
 }
 
 // contract: original pointer/struct referenced must live longer than C.GoQuerier struct
