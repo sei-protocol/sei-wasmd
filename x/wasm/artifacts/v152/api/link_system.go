@@ -2,5 +2,5 @@
 
 package api
 
-// #cgo LDFLAGS: -lwasmvm
+// #cgo LDFLAGS: -lwasmvm152
 import "C"
