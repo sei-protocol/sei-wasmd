@@ -168,6 +168,7 @@ func NewKeeper(
 func (k Keeper) getWasmer(ctx sdk.Context) types.WasmerEngine {
 	if ctx.IsTracing() {
 		if ctx.BlockHeight() < 102491599 {
+			fmt.Println("TONYDEBUG: using VM152")
 			return k.rpcWasmVM152
 		}
 		return k.rpcWasmVM
