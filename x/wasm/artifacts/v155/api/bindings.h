@@ -23,35 +23,35 @@ typedef int32_t ErrnoValue;
  * 0 means no error, all the other cases are some sort of error.
  *
  */
-enum GoError {
-  GoError_None = 0,
+enum GoError155 {
+  GoError155_None = 0,
   /**
    * Go panicked for an unexpected reason.
    */
-  GoError_Panic = 1,
+  GoError155_Panic = 1,
   /**
    * Go received a bad argument from Rust
    */
-  GoError_BadArgument = 2,
+  GoError155_BadArgument = 2,
   /**
    * Ran out of gas while using the SDK (e.g. storage). This can come from the Cosmos SDK gas meter
    * (https://github.com/cosmos/cosmos-sdk/blob/v0.45.4/store/types/gas.go#L29-L32).
    */
-  GoError_OutOfGas = 3,
+  GoError155_OutOfGas = 3,
   /**
    * Error while trying to serialize data in Go code (typically json.Marshal)
    */
-  GoError_CannotSerialize = 4,
+  GoError155_CannotSerialize = 4,
   /**
    * An error happened during normal operation of a Go callback, which should be fed back to the contract
    */
-  GoError_User = 5,
+  GoError155_User = 5,
   /**
-   * An error type that should never be created by us. It only serves as a fallback for the i32 to GoError conversion.
+   * An error type that should never be created by us. It only serves as a fallback for the i32 to GoError155 conversion.
    */
-  GoError_Other = -1,
+  GoError155_Other = -1,
 };
-typedef int32_t GoError;
+typedef int32_t GoError155;
 
 typedef struct cache_t {
 
@@ -130,7 +130,7 @@ typedef struct ByteSliceView {
  *
  * ```rust
  * # use cosmwasm_vm::{BackendResult, GasInfo};
- * # use wasmvm::{Db, GoError, U8SliceView, UnmanagedVector};
+ * # use wasmvm::{Db, GoError155, U8SliceView, UnmanagedVector};
  * fn db_read(db: &Db, key: &[u8]) -> BackendResult<Option<Vec<u8>>> {
  *
  *     // Create a None vector in order to reserve memory for the result
@@ -140,7 +140,7 @@ typedef struct ByteSliceView {
  *     # let mut error_msg = UnmanagedVector::default();
  *     # let mut used_gas = 0_u64;
  *
- *     let go_error: GoError = (db.vtable.read_db)(
+ *     let go_error: GoError155 = (db.vtable.read_db)(
  *         db.state,
  *         db.gas_meter,
  *         &mut used_gas as *mut u64,
