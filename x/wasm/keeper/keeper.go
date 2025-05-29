@@ -228,7 +228,7 @@ func (k Keeper) storeCodeInfo(ctx sdk.Context, codeID uint64, codeInfo types.Cod
 	store.Set(types.GetCodeKey(codeID), k.cdc.MustMarshal(&codeInfo))
 }
 
-func (k Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeInfo, wasmCode []byte) error {
+func (k Keeper) ImportCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeInfo, wasmCode []byte) error {
 	wasmCode, err := ioutils.Uncompress(wasmCode, uint64(types.MaxWasmSize))
 	if err != nil {
 		return sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
@@ -350,13 +350,16 @@ func (k Keeper) instantiate(ctx sdk.Context, codeID uint64, creator, admin sdk.A
 // Execute executes the contract instance
 func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "execute")
+	fmt.Printf("TONYDEBUG: execute 1 %d\n", ctx.GasMeter().GasConsumed())
 	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("TONYDEBUG: execute 2 %d\n", ctx.GasMeter().GasConsumed())
 
 	executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeID), len(msg))
 	ctx.GasMeter().ConsumeGas(executeCosts, "Loading CosmWasm module: execute")
+	fmt.Printf("TONYDEBUG: execute 3 %d\n", ctx.GasMeter().GasConsumed())
 
 	// add more funds
 	if !coins.IsZero() {
@@ -364,6 +367,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 			return nil, err
 		}
 	}
+	fmt.Printf("TONYDEBUG: execute 4 %d\n", ctx.GasMeter().GasConsumed())
 
 	env := types.NewEnv(ctx, contractAddress)
 	info := types.NewInfo(caller, coins)
@@ -371,6 +375,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	// prepare querier
 	querier := k.newQueryHandler(ctx, contractAddress)
 	gas := k.runtimeGasForContract(ctx)
+	fmt.Printf("TONYDEBUG: execute 5 %d, %d\n", ctx.GasMeter().GasConsumed(), gas)
 	res, gasUsed, execErr := k.wasmVM.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gas, costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if execErr != nil {
@@ -382,6 +387,24 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
 	))
 
+	if contractAddress.String() == "sei1e3gttzq5e5k49f9f5gzvrl0rltlav65xu6p9xc0aj7e84lantdjqp7cncc" {
+		fmt.Printf("TONYDEBUG: gas after execution is %d", ctx.GasMeter().GasConsumed())
+	}
+
+	for _, m := range res.Messages {
+		if m.Msg.Bank != nil {
+			fmt.Println(m.Msg.Bank.Send)
+		}
+		if m.Msg.Custom != nil {
+			fmt.Println(string(m.Msg.Custom))
+		}
+		if m.Msg.Staking != nil {
+			fmt.Println(m.Msg.Staking.Delegate)
+		}
+		if m.Msg.Wasm != nil {
+			fmt.Println(m.Msg.Wasm.Execute)
+		}
+	}
 	data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Data, res.Events, info, codeInfo)
 	if err != nil {
 		return nil, sdkerrors.Wrap(err, "dispatch")

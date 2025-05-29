@@ -3,6 +3,7 @@ package keeper
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 
@@ -42,6 +43,16 @@ type GRPCQueryRouter interface {
 var _ wasmvmtypes.Querier = QueryHandler{}
 
 func (q QueryHandler) Query(request wasmvmtypes.QueryRequest, gasLimit uint64) ([]byte, error) {
+	if request.Bank != nil && request.Bank.Balance != nil {
+		if request.Bank.Balance.Address == "sei1e3gttzq5e5k49f9f5gzvrl0rltlav65xu6p9xc0aj7e84lantdjqp7cncc" {
+			fmt.Printf("TONYDEBUG: Query balance for %s with gas limit %d\n", request.Bank.Balance.Denom, gasLimit)
+		}
+	}
+	if request.Staking != nil && request.Staking.Delegation != nil {
+		if request.Staking.Delegation.Delegator == "sei1e3gttzq5e5k49f9f5gzvrl0rltlav65xu6p9xc0aj7e84lantdjqp7cncc" {
+			fmt.Printf("TONYDEBUG: Query delegation for %s with gas limit %d\n", request.Staking.Delegation.Validator, gasLimit)
+		}
+	}
 	// set a limit for a subCtx
 	sdkGas := q.gasRegister.FromWasmVMGas(gasLimit)
 	// discard all changes/ events in subCtx by not committing the cached context
@@ -49,7 +60,10 @@ func (q QueryHandler) Query(request wasmvmtypes.QueryRequest, gasLimit uint64) (
 
 	// make sure we charge the higher level context even on panic
 	defer func() {
+		fmt.Println(q.Ctx.GasMeter().GasConsumed())
 		q.Ctx.GasMeter().ConsumeGas(subCtx.GasMeter().GasConsumed(), "contract sub-query")
+		fmt.Println(subCtx.GasMeter().GasConsumed())
+		fmt.Println("done")
 	}()
 
 	res, err := q.Plugins.HandleQuery(subCtx, q.Caller, request)
