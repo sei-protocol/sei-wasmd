@@ -4,7 +4,7 @@ package api
 // how this embedded C code works.
 
 /*
-#include "bindings.h"
+#include "bindings155.h"
 
 // typedefs for _cgo functions (db)
 typedef GoError155 (*read_db_fn)(db_t *ptr, gas_meter_t *gas_meter, uint64_t *used_gas, U8SliceView key, UnmanagedVector *val, UnmanagedVector *errOut);
@@ -50,7 +50,7 @@ import (
 	"github.com/CosmWasm/wasmvm/types"
 )
 
-// Note: we have to include all exports in the same file (at least since they both import bindings.h),
+// Note: we have to include all exports in the same file (at least since they both import bindings155.h),
 // or get odd cgo build errors about duplicate definitions
 
 func recoverPanic(ret *C.GoError155) {

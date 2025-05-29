@@ -1,7 +1,7 @@
 package api
 
 // #include <stdlib.h>
-// #include "bindings.h"
+// #include "bindings155.h"
 import "C"
 
 import (
@@ -193,7 +193,7 @@ func Instantiate(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.instantiate_v155(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue155_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
@@ -233,7 +233,7 @@ func Execute(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.execute_v155(cache.ptr, cs, e, i, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue155_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
@@ -270,7 +270,7 @@ func Migrate(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.migrate_v155(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue155_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
@@ -307,7 +307,7 @@ func Sudo(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.sudo_v155(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue155_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
@@ -344,7 +344,7 @@ func Reply(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.reply_v155(cache.ptr, cs, e, r, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue155_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
@@ -381,7 +381,7 @@ func Query(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.query_v155(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue155_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
@@ -418,7 +418,7 @@ func IBCChannelOpen(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.ibc_channel_open_v155(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue155_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
@@ -455,7 +455,7 @@ func IBCChannelConnect(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.ibc_channel_connect_v155(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue155_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
@@ -492,7 +492,7 @@ func IBCChannelClose(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.ibc_channel_close_v155(cache.ptr, cs, e, m, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue155_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
@@ -529,7 +529,7 @@ func IBCPacketReceive(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.ibc_packet_receive_v155(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue155_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
@@ -566,7 +566,7 @@ func IBCPacketAck(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.ibc_packet_ack_v155(cache.ptr, cs, e, ac, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue155_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}
@@ -603,7 +603,7 @@ func IBCPacketTimeout(
 	errmsg := uninitializedUnmanagedVector()
 
 	res, err := C.ibc_packet_timeout_v155(cache.ptr, cs, e, pa, db, a, q, cu64(gasLimit), cbool(printDebug), &gasReport, &errmsg)
-	if err != nil && err.(syscall.Errno) != C.ErrnoValue_Success {
+	if err != nil && err.(syscall.Errno) != C.ErrnoValue155_Success {
 		// Depending on the nature of the error, `gasUsed` will either have a meaningful value, or just 0.
 		return nil, convertGasReport(gasReport), errorWithMessage(err, errmsg)
 	}

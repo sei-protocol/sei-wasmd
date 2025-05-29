@@ -9,12 +9,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-enum ErrnoValue {
-  ErrnoValue_Success = 0,
-  ErrnoValue_Other = 1,
-  ErrnoValue_OutOfGas = 2,
+enum ErrnoValue155 {
+  ErrnoValue155_Success = 0,
+  ErrnoValue155_Other = 1,
+  ErrnoValue155_OutOfGas = 2,
 };
-typedef int32_t ErrnoValue;
+typedef int32_t ErrnoValue155;
 
 /**
  * This enum gives names to the status codes returned from Go callbacks to Rust.
