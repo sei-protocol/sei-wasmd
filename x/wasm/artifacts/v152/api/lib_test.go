@@ -907,7 +907,7 @@ func createIBCReflectContract(t *testing.T, cache Cache) []byte {
 }
 
 func createFloaty2(t *testing.T, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/floaty_2.0.wasm")
+	return createContract(t, cache, "x/wasm/keeper/testdata/floaty_2.0.wasm")
 }
 
 func getWasmFromFile(t *testing.T, wasmFile string) []byte {

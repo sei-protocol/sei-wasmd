@@ -140,7 +140,7 @@ func NewTestChain(t *testing.T, coord *Coordinator, chainID string, opts ...wasm
 		Coins:   sdk.NewCoins(sdk.NewCoin(sdk.DefaultBondDenom, amount)),
 	}
 
-	app := NewTestingAppDecorator(t, wasmd.SetupWithGenesisValSet(t, valSet, []authtypes.GenesisAccount{acc}, opts, balance))
+	app := NewTestingAppDecorator(t, wasmd.SetupWithGenesisValSet(t, chainID, valSet, []authtypes.GenesisAccount{acc}, opts, balance))
 
 	// create current header and call begin block
 	header := tmproto.Header{
@@ -265,7 +265,15 @@ func (chain *TestChain) NextBlock() {
 	}
 
 	wasmApp := chain.App.(*TestingAppDecorator).WasmApp
-	wasmApp.BeginBlock(wasmApp.GetContextForDeliverTx([]byte{}), abci.RequestBeginBlock{Header: chain.CurrentHeader})
+	wasmApp.FinalizeBlock(context.Background(), &abci.RequestFinalizeBlock{
+		Height:  chain.App.LastBlockHeight() + 1,
+		Time:    chain.CurrentHeader.Time,
+		AppHash: chain.CurrentHeader.AppHash,
+
+		ValidatorsHash:     chain.Vals.Hash(),
+		NextValidatorsHash: chain.Vals.Hash(),
+	})
+	// wasmApp.BeginBlock(wasmApp.GetContextForDeliverTx([]byte{}), abci.RequestBeginBlock{Header: chain.CurrentHeader})
 }
 
 // sendMsgs delivers a transaction through the application without returning the result.
@@ -460,15 +468,21 @@ func (chain *TestChain) CreateTMClientHeader(chainID string, blockHeight int64, 
 	blockID := MakeBlockID(hhash, 3, tmhash.Sum([]byte("part_set")))
 	voteSet := tmtypes.NewVoteSet(chainID, blockHeight, 1, tmproto.PrecommitType, tmValSet)
 	for i, val := range tmValSet.Validators {
-		voteSet.AddVote(&tmtypes.Vote{
-			Type:             tmproto.PrevoteType,
+		privVal := signers[i]
+		vote := &tmtypes.Vote{
+			Type:             tmproto.PrecommitType,
 			Height:           blockHeight,
 			Round:            1,
 			BlockID:          blockID,
 			Timestamp:        timestamp,
 			ValidatorAddress: val.Address,
 			ValidatorIndex:   int32(i),
-		})
+		}
+		v := vote.ToProto()
+		err := privVal.SignVote(context.Background(), chainID, v)
+		require.NoError(chain.t, err)
+		vote.Signature = v.Signature
+		voteSet.AddVote(vote)
 	}
 
 	commit := voteSet.MakeExtendedCommit().ToCommit()
