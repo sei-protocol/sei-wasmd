@@ -9,7 +9,7 @@ import (
 
 	channeltypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
 	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
-	ibctesting "github.com/cosmos/ibc-go/v3/testing"
+
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
 
@@ -138,8 +138,8 @@ func (coord *Coordinator) CreateConnections(path *Path) {
 // function is expects the channels to be successfully opened otherwise testing will
 // fail.
 func (coord *Coordinator) CreateMockChannels(path *Path) {
-	path.EndpointA.ChannelConfig.PortID = ibctesting.MockPort
-	path.EndpointB.ChannelConfig.PortID = ibctesting.MockPort
+	path.EndpointA.ChannelConfig.PortID = MockPort
+	path.EndpointB.ChannelConfig.PortID = MockPort
 
 	coord.CreateChannels(path)
 }
@@ -148,8 +148,8 @@ func (coord *Coordinator) CreateMockChannels(path *Path) {
 // ibc-transfer channels on chainA and chainB. The function expects the channels to be
 // successfully opened otherwise testing will fail.
 func (coord *Coordinator) CreateTransferChannels(path *Path) {
-	path.EndpointA.ChannelConfig.PortID = ibctesting.TransferPort
-	path.EndpointB.ChannelConfig.PortID = ibctesting.TransferPort
+	path.EndpointA.ChannelConfig.PortID = TransferPort
+	path.EndpointB.ChannelConfig.PortID = TransferPort
 
 	coord.CreateChannels(path)
 }

@@ -84,8 +84,7 @@ func TestStoreCodeAndGetCode(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
-	wasm, err := ioutil.ReadFile("../../testdata/hackatom.wasm")
-	require.NoError(t, err)
+	wasm := getWasmFromFile(t, "x/wasm/keeper/testdata/hackatom.wasm")
 
 	checksum, err := StoreCode(cache, wasm)
 	require.NoError(t, err)
@@ -101,8 +100,7 @@ func TestRemoveCode(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
-	wasm, err := ioutil.ReadFile("../../testdata/hackatom.wasm")
-	require.NoError(t, err)
+	wasm := getWasmFromFile(t, "x/wasm/keeper/testdata/hackatom.wasm")
 
 	checksum, err := StoreCode(cache, wasm)
 	require.NoError(t, err)
@@ -129,8 +127,7 @@ func TestStoreCodeUnchecked(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
-	wasm, err := ioutil.ReadFile("../../testdata/hackatom.wasm")
-	require.NoError(t, err)
+	wasm := getWasmFromFile(t, "x/wasm/keeper/testdata/hackatom.wasm")
 
 	checksum, err := StoreCodeUnchecked(cache, wasm)
 	require.NoError(t, err)
@@ -146,8 +143,7 @@ func TestPin(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
-	wasm, err := ioutil.ReadFile("../../testdata/hackatom.wasm")
-	require.NoError(t, err)
+	wasm := getWasmFromFile(t, "x/wasm/keeper/testdata/hackatom.wasm")
 
 	checksum, err := StoreCode(cache, wasm)
 	require.NoError(t, err)
@@ -189,8 +185,7 @@ func TestUnpin(t *testing.T) {
 	cache, cleanup := withCache(t)
 	defer cleanup()
 
-	wasm, err := ioutil.ReadFile("../../testdata/hackatom.wasm")
-	require.NoError(t, err)
+	wasm := getWasmFromFile(t, "x/wasm/keeper/testdata/hackatom.wasm")
 
 	checksum, err := StoreCode(cache, wasm)
 	require.NoError(t, err)
@@ -234,8 +229,7 @@ func TestGetMetrics(t *testing.T) {
 	assert.Equal(t, &types.Metrics{}, metrics)
 
 	// Store contract
-	wasm, err := ioutil.ReadFile("../../testdata/hackatom.wasm")
-	require.NoError(t, err)
+	wasm := getWasmFromFile(t, "x/wasm/keeper/testdata/hackatom.wasm")
 	checksum, err := StoreCode(cache, wasm)
 	require.NoError(t, err)
 
@@ -345,8 +339,7 @@ func TestInstantiate(t *testing.T) {
 	defer cleanup()
 
 	// create contract
-	wasm, err := ioutil.ReadFile("../../testdata/hackatom.wasm")
-	require.NoError(t, err)
+	wasm := getWasmFromFile(t, "x/wasm/keeper/testdata/hackatom.wasm")
 	checksum, err := StoreCode(cache, wasm)
 	require.NoError(t, err)
 
@@ -894,28 +887,41 @@ func requireQueryOk(t *testing.T, res []byte) []byte {
 }
 
 func createHackatomContract(t *testing.T, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/hackatom.wasm")
+	return createContract(t, cache, "x/wasm/keeper/testdata/hackatom.wasm")
 }
 
 func createCyberpunkContract(t *testing.T, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/cyberpunk.wasm")
+	return createContract(t, cache, "x/wasm/keeper/testdata/cyberpunk.wasm")
 }
 
 func createQueueContract(t *testing.T, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/queue.wasm")
+	return createContract(t, cache, "x/wasm/keeper/testdata/queue.wasm")
 }
 
 func createReflectContract(t *testing.T, cache Cache) []byte {
-	return createContract(t, cache, "../../testdata/reflect.wasm")
+	return createContract(t, cache, "x/wasm/keeper/testdata/reflect.wasm")
+}
+
+func createIBCReflectContract(t *testing.T, cache Cache) []byte {
+	return createContract(t, cache, "x/wasm/keeper/testdata/ibc_reflect.wasm")
 }
 
 func createFloaty2(t *testing.T, cache Cache) []byte {
 	return createContract(t, cache, "../../testdata/floaty_2.0.wasm")
 }
 
-func createContract(t *testing.T, cache Cache, wasmFile string) []byte {
-	wasm, err := ioutil.ReadFile(wasmFile)
+func getWasmFromFile(t *testing.T, wasmFile string) []byte {
+	pwd, err := os.Getwd()
 	require.NoError(t, err)
+	projectRoot := strings.Split(pwd, "x/wasm")[0]
+	absPath := filepath.Join(projectRoot, wasmFile)
+	wasm, err := ioutil.ReadFile(absPath)
+	require.NoError(t, err)
+	return wasm
+}
+
+func createContract(t *testing.T, cache Cache, wasmFile string) []byte {
+	wasm := getWasmFromFile(t, wasmFile)
 	checksum, err := StoreCode(cache, wasm)
 	require.NoError(t, err)
 	return checksum

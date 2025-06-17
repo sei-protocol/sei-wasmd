@@ -43,15 +43,7 @@ jobs:
         env:
           GORACE: halt_on_error=1
           GO111MODULE: on
-        run: |
-          mkdir -p profiles
-          PKGS_TO_TEST=$(go list ./... | grep -v '/simulation' | awk "NR % 4 == $((${{ matrix.partition }} - 1))")
-          echo "Testing packages:"
-          echo "$PKGS_TO_TEST"
-          for pkg in $PKGS_TO_TEST; do
-            id=$(echo "$pkg" | sed 's|[/.]|_|g')
-            go test -mod=readonly -timeout 8m -race -coverprofile=profiles/$id.out -covermode=atomic -tags='ledger test_ledger_mock' "$pkg"
-          done
+        run: make test-group-${{ matrix.partition }}
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4

@@ -31,7 +31,6 @@ import (
 	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
 	"github.com/cosmos/ibc-go/v3/modules/core/types"
 	ibctmtypes "github.com/cosmos/ibc-go/v3/modules/light-clients/07-tendermint/types"
-	ibctesting "github.com/cosmos/ibc-go/v3/testing"
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto"
@@ -53,7 +52,7 @@ type TestChain struct {
 	t *testing.T
 
 	Coordinator   *Coordinator
-	App           ibctesting.TestingApp
+	App           TestingApp
 	ChainID       string
 	LastHeader    *ibctmtypes.Header // header for last block height committed
 	CurrentHeader tmproto.Header     // header for current block height
@@ -607,7 +606,7 @@ func (chain TestChain) GetTestSupport() *wasmd.TestSupport {
 	return chain.App.(*TestingAppDecorator).TestSupport()
 }
 
-var _ ibctesting.TestingApp = TestingAppDecorator{}
+var _ TestingApp = TestingAppDecorator{}
 
 type TestingAppDecorator struct {
 	*wasmd.WasmApp
