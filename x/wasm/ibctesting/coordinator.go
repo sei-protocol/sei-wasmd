@@ -79,7 +79,14 @@ func (coord *Coordinator) UpdateTime() {
 func (coord *Coordinator) UpdateTimeForChain(chain *TestChain) {
 	chain.CurrentHeader.Time = coord.CurrentTime.UTC()
 	wasmApp := chain.App.(*TestingAppDecorator).WasmApp
-	wasmApp.BeginBlock(wasmApp.GetContextForDeliverTx([]byte{}), abci.RequestBeginBlock{Header: chain.CurrentHeader})
+	wasmApp.FinalizeBlock(context.Background(), &abci.RequestFinalizeBlock{
+		Height:  chain.App.LastBlockHeight() + 1,
+		Time:    chain.CurrentHeader.Time,
+		AppHash: chain.CurrentHeader.AppHash,
+
+		ValidatorsHash:     chain.Vals.Hash(),
+		NextValidatorsHash: chain.Vals.Hash(),
+	})
 }
 
 // Setup constructs a TM client, connection, and channel on both chains provided. It will
@@ -205,7 +212,14 @@ func (coord *Coordinator) CommitBlock(chains ...*TestChain) {
 func (coord *Coordinator) CommitNBlocks(chain *TestChain, n uint64) {
 	for i := uint64(0); i < n; i++ {
 		wasmApp := chain.App.(*TestingAppDecorator).WasmApp
-		wasmApp.BeginBlock(wasmApp.GetContextForDeliverTx([]byte{}), abci.RequestBeginBlock{Header: chain.CurrentHeader})
+		wasmApp.FinalizeBlock(context.Background(), &abci.RequestFinalizeBlock{
+			Height:  chain.App.LastBlockHeight() + 1,
+			Time:    chain.CurrentHeader.Time,
+			AppHash: chain.CurrentHeader.AppHash,
+
+			ValidatorsHash:     chain.Vals.Hash(),
+			NextValidatorsHash: chain.Vals.Hash(),
+		})
 		wasmApp.SetDeliverStateToCommit()
 		chain.App.Commit(context.Background())
 		chain.NextBlock()

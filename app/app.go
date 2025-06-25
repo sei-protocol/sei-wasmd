@@ -198,6 +198,7 @@ var (
 		slashing.AppModuleBasic{},
 		feegrantmodule.AppModuleBasic{},
 		ibc.AppModuleBasic{},
+		transfer.AppModuleBasic{},
 		authzmodule.AppModuleBasic{},
 		upgrade.AppModuleBasic{},
 		evidence.AppModuleBasic{},
@@ -578,6 +579,7 @@ func NewWasmApp(
 		evidence.NewAppModule(app.evidenceKeeper),
 		feegrantmodule.NewAppModule(appCodec, app.accountKeeper, app.bankKeeper, app.feeGrantKeeper, app.interfaceRegistry),
 		ibc.NewAppModule(app.ibcKeeper),
+		transferModule,
 		authzmodule.NewAppModule(appCodec, app.authzKeeper, app.accountKeeper, app.bankKeeper, app.interfaceRegistry),
 		params.NewAppModule(app.paramsKeeper),
 		crisis.NewAppModule(&app.crisisKeeper, skipGenesisInvariants), // always be last to make sure that it checks for all invariants and not only part of them
@@ -603,13 +605,6 @@ func NewWasmApp(
 		authz.ModuleName,
 		feegrant.ModuleName,
 		paramstypes.ModuleName,
-		vestingtypes.ModuleName,
-		// additional non simd modules
-		ibctransfertypes.ModuleName,
-		ibchost.ModuleName,
-		icatypes.ModuleName,
-		paramstypes.ModuleName,
-		upgradetypes.ModuleName,
 		vestingtypes.ModuleName,
 		// additional non simd modules
 		ibctransfertypes.ModuleName,

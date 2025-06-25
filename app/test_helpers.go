@@ -146,6 +146,7 @@ func SetupWithGenesisValSet(t *testing.T, chainID string, valSet *tmtypes.Valida
 	)
 
 	// commit genesis changes
+	app.SetProcessProposalStateToCommit()
 	app.Commit(context.Background())
 	app.FinalizeBlock(context.Background(), &abci.RequestFinalizeBlock{
 		Height:             app.LastBlockHeight() + 1,

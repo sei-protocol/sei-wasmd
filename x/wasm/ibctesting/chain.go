@@ -313,8 +313,6 @@ func (chain *TestChain) SendMsgs(msgs ...sdk.Msg) (*sdk.Result, error) {
 		return nil, err
 	}
 
-	chain.Coordinator.IncrementTime()
-
 	chain.captureIBCEvents(r)
 
 	return r, nil
