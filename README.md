@@ -1,3 +1,7 @@
+
+> [!IMPORTANT]
+> This repository has been archived and is moved to [`sei-chain`](https://github.com/sei-protocol/sei-chain) as a nested module.
+
 # Wasm Zone
 
 [![CircleCI](https://circleci.com/gh/CosmWasm/wasmd/tree/master.svg?style=shield)](https://circleci.com/gh/CosmWasm/wasmd/tree/master)
