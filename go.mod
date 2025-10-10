@@ -8,7 +8,7 @@ require (
 	github.com/cosmos/cosmos-sdk v0.45.10
 	github.com/cosmos/iavl v0.21.0-alpha.1.0.20230904092046-df3db2d96583
 	github.com/cosmos/ibc-go/v3 v3.0.0
-	github.com/dvsekhvalnov/jose2go v1.5.0
+	github.com/dvsekhvalnov/jose2go v1.8.0
 	github.com/gogo/protobuf v1.3.3
 	github.com/golang/protobuf v1.5.3
 	github.com/google/btree v1.1.2
