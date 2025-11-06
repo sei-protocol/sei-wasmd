@@ -1,7 +1,9 @@
 package x
 
-import "github.com/pkg/errors"
+import (
+	"github.com/CosmWasm/wasmd/x/wasm/artifacts"
+)
 
 func ErrorOut() error {
-	return errors.WithStack(errors.New("dumb"))
+	return artifacts.ErrorOut()
 }
