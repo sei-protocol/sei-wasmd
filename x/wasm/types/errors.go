@@ -88,7 +88,10 @@ var (
 	// ErrExceedMaxQueryStackSize error if max query stack size is exceeded
 	ErrExceedMaxQueryStackSize = sdkErrors.Register(DefaultCodespace, 27, "max query stack size exceeded")
 
-	// unused 28..29
+	// unused 28
+
+	// ErrVMError means an error occurred in wasmvm (not in the contract itself, but in the host environment)
+	ErrVMError = sdkErrors.Register(DefaultCodespace, 29, "wasmvm error")
 
 	// ErrExceedMaxCallDepth error if max query stack size is exceeded
 	ErrExceedMaxCallDepth = sdkErrors.Register(DefaultCodespace, 30, "max call depth exceeded")
@@ -108,4 +111,35 @@ func (m *ErrNoSuchContract) ABCICode() uint32 {
 
 func (m *ErrNoSuchContract) Codespace() string {
 	return DefaultCodespace
+}
+
+// DeterministicError is a wrapper type around an error that the creator guarantees to have
+// a deterministic error message.
+// This means that the `Error()` function must always return the same string on all nodes.
+// The DeterministicError has the same error message as the wrapped error.
+// DeterministicErrors are not redacted when returned to a contract,
+// so not upholding this guarantee can lead to consensus failures.
+type DeterministicError struct {
+	error
+}
+
+var _ error = DeterministicError{}
+
+// MarkErrorDeterministic marks an error as deterministic.
+// Make sure to only do that if the error message is deterministic between systems.
+// See [DeterministicError] for more details.
+func MarkErrorDeterministic(e error) DeterministicError {
+	return DeterministicError{error: e}
+}
+
+// Unwrap implements the built-in errors.Unwrap
+func (e DeterministicError) Unwrap() error {
+	return e.error
+}
+
+// Cause is the same as unwrap but used by ABCIInfo
+// By returning the wrapped error here, we ensure that the DeterministicError inherits
+// the ABCIInfo of the wrapped error.
+func (e DeterministicError) Cause() error {
+	return e.Unwrap()
 }

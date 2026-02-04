@@ -355,7 +355,7 @@ func (vm *VM) IBCChannelOpen(
 	gasMeter GasMeter,
 	gasLimit uint64,
 	deserCost types.UFraction,
-) (*types.IBC3ChannelOpenResponse, uint64, error) {
+) (*types.IBCChannelOpenResult, uint64, error) {
 	envBin, err := json.Marshal(env)
 	if err != nil {
 		return nil, 0, err
@@ -377,7 +377,7 @@ func (vm *VM) IBCChannelOpen(
 	if resp.Err != "" {
 		return nil, gasReport.UsedInternally, fmt.Errorf("%s", resp.Err)
 	}
-	return resp.Ok, gasReport.UsedInternally, nil
+	return &resp, gasReport.UsedInternally, nil
 }
 
 // IBCChannelConnect is available on IBC-enabled contracts and is a hook to call into

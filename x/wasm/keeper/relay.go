@@ -24,8 +24,6 @@ func (k Keeper) OnOpenChannel(
 	msg wasmvmtypes.IBCChannelOpenMsg,
 ) (string, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "ibc-open-channel")
-	version := ""
-
 	_, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddr)
 	if err != nil {
 		return "", err
@@ -37,15 +35,26 @@ func (k Keeper) OnOpenChannel(
 	gas := k.runtimeGasForContract(ctx)
 	res, gasUsed, execErr := k.getWasmer(ctx).IBCChannelOpen(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gas, costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
+	// check if contract panicked / VM failed
 	if execErr != nil {
 		return "", sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}
 
-	if res != nil {
-		version = res.Version
+	if res == nil {
+		// If this gets executed, that's a bug in wasmvm
+		return "", sdkerrors.Wrap(types.ErrVMError, "internal wasmvm error")
+	}
+	// check contract result
+	if res.Err != "" {
+		return "", types.MarkErrorDeterministic(sdkerrors.Wrap(types.ErrExecuteFailed, res.Err))
+	}
+	if res.Ok == nil {
+		// a nil "ok" value is a valid response and means the contract accepts the incoming channel version
+		// see https://docs.rs/cosmwasm-std/2.2.2/cosmwasm_std/type.IbcChannelOpenResponse.html
+		return "", nil
 	}
 
-	return version, nil
+	return res.Ok.Version, nil
 }
 
 // OnConnectChannel calls the contract to let it know the IBC channel was established.
